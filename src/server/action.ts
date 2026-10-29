@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { ForbiddenError } from "./auth";
+import { logError } from "./log";
 
 import type { ActionState } from "@/components/form";
 export type { ActionState };
@@ -28,7 +29,7 @@ export async function runAction(fn: () => Promise<string | void>): Promise<Actio
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
       return { error: "Suppression impossible : des données y sont rattachées." };
     }
-    console.error(e);
+    logError("action", e);
     return { error: "Une erreur inattendue est survenue." };
   }
 }

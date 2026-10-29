@@ -1,0 +1,2 @@
+# /etc/cron.d/vamos-backup — sauvegarde quotidienne à 2 h (heure du serveur réglée sur Africa/Tunis)
+0 2 * * * vamos cd /opt/vamos/app && set -a && . ./.env && set +a && ./scripts/backup.sh >> /var/log/vamos-backup.log 2>&1

@@ -14,6 +14,11 @@ export default async function Profile() {
   return (
     <>
       <PageHeader title="Mon profil" />
+      {u.mustChangePassword && (
+        <p role="alert" className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Pour des raisons de sécurité, vous devez choisir un nouveau mot de passe personnel avant d&apos;utiliser l&apos;application.
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Compte">
           <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">

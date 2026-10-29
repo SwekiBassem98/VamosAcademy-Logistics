@@ -11,7 +11,7 @@ import { runAction, BusinessError, type ActionState } from "@/server/action";
 export async function updateNotifications(fd: FormData): Promise<ActionState> {
   const res = await runAction(async () => {
     const user = await requireUser();
-    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean);
+    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean).slice(0, 500);
     const status = String(fd.get("status") ?? "");
     if (!ids.length) throw new BusinessError("Aucune notification sélectionnée.");
     if (!["LUE", "TRAITEE", "NOUVELLE"].includes(status)) throw new BusinessError("Statut invalide.");

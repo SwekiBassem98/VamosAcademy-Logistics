@@ -41,7 +41,7 @@ const fd = (o: Record<string, string | string[] | undefined>) => {
   for (const [k, v] of Object.entries(o)) for (const x of [v ?? ""].flat()) f.append(k, x);
   return f;
 };
-const users: Partial<Record<Role, { id: string; role: Role; teacherId: string | null; email: string; fullName: string }>> = {};
+const users: Partial<Record<Role, { id: string; role: Role; teacherId: string | null; email: string; fullName: string; mustChangePassword: boolean }>> = {};
 async function loginAs(role: Role, teacherId?: string) {
   const user = users[role] ?? (users[role] = await db.user.create({ data: { email: `${role.toLowerCase()}@scenario.tn`, fullName: `Test ${role}`, role, passwordHash: "x", teacherId } }));
   const token = randomBytes(32).toString("base64url");

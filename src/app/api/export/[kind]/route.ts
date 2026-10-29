@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getCurrentUser } from "@/server/auth";
+import { apiUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { buildTable, toCsv, toXlsx } from "@/server/exports";
@@ -8,7 +8,7 @@ import { todayISO } from "@/lib/format";
 /** Exports CSV (par défaut) ou Excel (?format=xlsx) ; permissions vérifiées par type d'export. */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ kind: string }> }) {
   const { kind } = await params;
-  const user = await getCurrentUser();
+  const user = await apiUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   const sp = Object.fromEntries(req.nextUrl.searchParams);
   const table = await buildTable(kind, sp, user);

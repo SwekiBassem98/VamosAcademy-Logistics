@@ -64,7 +64,7 @@ export default async function Settings() {
         {can(user.role, "users.manage") && (
           <Card title="Données de démonstration">
             <p className="text-sm text-gray-700">Les données fictives sont marquées <Badge tone="amber">DÉMO</Badge> partout dans l&apos;application et n&apos;apparaissent jamais comme réelles sur les documents (mention imprimée).</p>
-            <p className="mt-2 text-sm">Actuellement : <strong>{demo.students}</strong> élève(s), <strong>{demo.guardians}</strong> parent(s), <strong>{demo.teachers}</strong> enseignant(s), <strong>{demo.groups}</strong> groupe(s), <strong>{demo.expenses}</strong> dépense(s) de démonstration.</p>
+            <p className="mt-2 text-sm">Actuellement : <strong>{demo.students}</strong> élève(s), <strong>{demo.guardians}</strong> parent(s), <strong>{demo.teachers}</strong> enseignant(s), <strong>{demo.groups}</strong> groupe(s), <strong>{demo.expenses}</strong> dépense(s) de démonstration, <strong>{demo.accounts}</strong> compte(s) de test.</p>
             {demo.total > 0 ? (
               <div className="mt-4">
                 <ConfirmAction action={purgeDemo} label="Supprimer les données de démonstration" title="Supprimer définitivement les données de démonstration ?" withReason="Tapez SUPPRIMER pour confirmer"

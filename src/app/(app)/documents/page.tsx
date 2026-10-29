@@ -72,7 +72,7 @@ export default async function Documents() {
           </Doc>
         )}
         {has("students.read") && (
-          <Doc title="Fiche d'inscription / bulletin" text="Depuis le dossier de l'élève : « Fiche d'inscription », « Bulletin » et « Relevé de compte ».">
+          <Doc title="Fiche d'inscription / bulletin" text="Depuis le dossier de l'élève : « Fiche d'inscription » (administration), « Bulletin » et « Relevé de compte » (finances).">
             <Link href="/students" className="text-sm text-brand">Ouvrir la liste des élèves →</Link>
           </Doc>
         )}

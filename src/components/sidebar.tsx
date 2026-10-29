@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -18,6 +18,12 @@ const ICONS = {
   payroll: HandCoins, bell: Bell, messages: MessageSquareText, documents: Printer,
 };
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS; section: string };
+
+/** Indicateur de chargement pendant la navigation vers une page (remplace un squelette global). */
+function PendingDot() {
+  const { pending } = useLinkStatus();
+  return pending ? <span className="ml-auto size-3 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-label="Chargement" /> : null;
+}
 
 function Nav({ items, onNavigate, onClose }: { items: NavItem[]; onNavigate?: () => void; onClose?: () => void }) {
   const path = usePathname();
@@ -42,6 +48,7 @@ function Nav({ items, onNavigate, onClose }: { items: NavItem[]; onNavigate?: ()
                     active ? "bg-white/10 font-medium text-white before:absolute before:inset-y-1.5 before:left-0 before:w-1 before:rounded-r before:bg-brand" : "text-white/75 hover:bg-white/5 hover:text-white")}
                   aria-current={active ? "page" : undefined}>
                   <Icon className={clsx("size-4 shrink-0", active && "text-brand")} /> {i.label}
+                  <PendingDot />
                 </Link>
               );
             })}

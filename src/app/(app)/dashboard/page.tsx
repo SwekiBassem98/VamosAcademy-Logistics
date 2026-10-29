@@ -6,6 +6,7 @@ import { db } from "@/server/db";
 import { groupScope, studentScope } from "@/server/scope";
 import { unpaidSummary } from "@/server/services/finance";
 import { visibleWhere } from "@/server/services/notifications";
+import { demoCounts } from "@/server/services/demo";
 import { can } from "@/lib/permissions";
 import { formatDate, formatDateTime, formatMinutes, formatMoney, todayISO, parseDay } from "@/lib/format";
 
@@ -32,6 +33,7 @@ export default async function Dashboard() {
     );
   }
   const finance = can(user.role, "dashboard.finance");
+  const demo = can(user.role, "users.manage") ? await demoCounts() : null;
   const today = todayISO();
   const todayDate = parseDay(today);
   const monthStart = parseDay(`${today.slice(0, 8)}01`);
@@ -131,6 +133,12 @@ export default async function Dashboard() {
           {user.role === "ENSEIGNANT" && <LinkButton href="/attendance">Appels du jour</LinkButton>}
         </>}
       />
+      {demo && demo.total > 0 && (
+        <p role="alert" className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Données de démonstration présentes ({demo.students} élève(s), {demo.accounts} compte(s) de test au mot de passe connu).
+          Avant toute utilisation réelle, supprimez-les dans <Link href="/settings" className="font-medium underline">Paramètres → Données de démonstration</Link>.
+        </p>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={user.role === "ENSEIGNANT" ? "Mes élèves" : "Élèves actifs"} value={activeStudents} hint={`${enrollments} inscription(s) en cours · ${newEnrollments} nouvelle(s) sur 30 jours`} />
         {can(user.role, "attendance.read") && <Stat label="Présence (8 semaines)" value={attTotal ? `${Math.round((attOk / attTotal) * 100)} %` : "—"} hint={`${attTotal} pointage(s)`} />}
@@ -188,7 +196,7 @@ export default async function Dashboard() {
               {slotsToday.map((s) => (
                 <li key={s.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                   <span className="font-mono text-navy">{formatMinutes(s.startMin)}</span>
-                  <Link href={`/academics/groups/${s.groupId}`} className="flex-1 truncate font-medium hover:text-brand">{s.group.name}</Link>
+                  {can(user.role, "academics.read") ? <Link href={`/academics/groups/${s.groupId}`} className="flex-1 truncate font-medium hover:text-brand">{s.group.name}</Link> : <span className="flex-1 truncate font-medium">{s.group.name}</span>}
                   <span className="text-xs text-muted">{s.room.name}</span>
                   {s.group.sessions.length ? <Badge tone="green">appel fait</Badge> : <Badge>à faire</Badge>}
                 </li>

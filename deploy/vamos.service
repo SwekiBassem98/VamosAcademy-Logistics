@@ -1,0 +1,25 @@
+# /etc/systemd/system/vamos.service — application VAMOS ACADEMY (Next.js en production)
+[Unit]
+Description=VAMOS ACADEMY - gestion
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=vamos
+Group=vamos
+WorkingDirectory=/opt/vamos/app
+EnvironmentFile=/opt/vamos/app/.env
+Environment=NODE_ENV=production
+Environment=TZ=Africa/Tunis
+ExecStart=/usr/bin/npx next start -p 3000 -H 127.0.0.1
+Restart=on-failure
+RestartSec=5
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/vamos /opt/vamos/app/.next
+
+[Install]
+WantedBy=multi-user.target

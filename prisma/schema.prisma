@@ -21,21 +21,22 @@ enum Role {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  fullName     String
-  passwordHash String
-  role         Role
-  active       Boolean    @default(true)
-  failedLogins Int        @default(0)
-  lockedUntil  DateTime?
-  lastLoginAt  DateTime?
-  teacherId    String?    @unique
-  teacher      Teacher?   @relation(fields: [teacherId], references: [id])
-  sessions     Session[]
-  auditLogs    AuditLog[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                 String     @id @default(cuid())
+  email              String     @unique
+  fullName           String
+  passwordHash       String
+  role               Role
+  active             Boolean    @default(true)
+  failedLogins       Int        @default(0)
+  mustChangePassword Boolean    @default(false) // compte initial / mot de passe réinitialisé : changement obligatoire
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  teacherId          String?    @unique
+  teacher            Teacher?   @relation(fields: [teacherId], references: [id])
+  sessions           Session[]
+  auditLogs          AuditLog[]
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }
 
 model Session {

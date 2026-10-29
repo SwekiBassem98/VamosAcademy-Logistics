@@ -41,7 +41,7 @@ export async function prepareMessages(_: ActionState, fd: FormData): Promise<Act
 export async function markSent(fd: FormData): Promise<ActionState> {
   const res = await runAction(async () => {
     const user = await requirePermission("messages.write");
-    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean);
+    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean).slice(0, 500);
     if (!ids.length) throw new BusinessError("Aucun message sélectionné.");
     const msgs = await db.message.findMany({ where: { id: { in: ids }, status: "PREPARE" } });
     let sent = 0;
@@ -65,7 +65,7 @@ export async function markSent(fd: FormData): Promise<ActionState> {
 export async function cancelMessages(fd: FormData): Promise<ActionState> {
   const res = await runAction(async () => {
     const user = await requirePermission("messages.write");
-    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean);
+    const ids = String(fd.get("ids") ?? "").split(",").filter(Boolean).slice(0, 500);
     const r = await db.message.updateMany({ where: { id: { in: ids }, status: "PREPARE" }, data: { status: "ANNULE", error: String(fd.get("reason") ?? "") || null } });
     await audit(user.id, "messages.cancel", "Message", null, { count: r.count });
     return `${r.count} message(s) annulé(s).`;

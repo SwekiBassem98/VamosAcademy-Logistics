@@ -43,3 +43,7 @@ next-env.d.ts
 backups/
 /.next-dev/
 /storage/
+/.next-e2e/
+/.e2e-storage/
+/test-results/
+/playwright-report/

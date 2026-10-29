@@ -22,7 +22,15 @@ const PendingCtx = createContext(false);
 export function Form({
   action, children, className, resetOnSuccess = false,
 }: { action: Action; children: ReactNode; className?: string; resetOnSuccess?: boolean }) {
-  const [state, formAction, pending] = useActionState(action, null);
+  const [state, formAction, pending] = useActionState(async (prev: ActionState, fd: FormData): Promise<ActionState> => {
+    try {
+      return await action(prev, fd);
+    } catch (e) {
+      // Redirections et 404 de Next.js : à laisser passer
+      if (String((e as { digest?: string })?.digest ?? "").startsWith("NEXT_")) throw e;
+      return { error: "Connexion au serveur impossible ou interrompue. Vos saisies sont conservées : vérifiez la connexion puis réessayez." };
+    }
+  }, null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state?.ok && resetOnSuccess) ref.current?.reset();

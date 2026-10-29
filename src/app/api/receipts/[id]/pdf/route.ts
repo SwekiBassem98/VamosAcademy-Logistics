@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/server/auth";
+import { apiUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { receiptPdf } from "@/server/pdf";
 import { can } from "@/lib/permissions";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await getCurrentUser();
+  const user = await apiUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
   if (!can(user.role, "payments.read")) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const { id } = await params;

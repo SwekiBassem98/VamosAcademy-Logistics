@@ -31,7 +31,7 @@ export async function buildTable(kind: string, p: Params, user: CurrentUser): Pr
   switch (kind) {
     case "students": {
       const valid = ["PREINSCRIT", "ACTIF", "SUSPENDU", "ARCHIVE"].includes(p.status ?? "");
-      const ids = p.ids?.split(",").filter(Boolean);
+      const ids = p.ids?.split(",").filter(Boolean).slice(0, 500);
       const list = await db.student.findMany({
         where: { ...(ids?.length ? { id: { in: ids } } : valid ? { status: p.status as "ACTIF" } : { status: { not: "ARCHIVE" } }) },
         include: { level: true, guardians: { include: { guardian: true }, orderBy: { isPayer: "desc" } }, enrollments: { where: { status: "ACTIVE" }, include: { group: true } } },

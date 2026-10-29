@@ -49,7 +49,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
               <ul className="divide-y divide-line text-sm">
                 {t.groups.map((g) => (
                   <li key={g.id} className="flex items-center justify-between py-2">
-                    <Link href={`/academics/groups/${g.id}`} className="font-medium hover:text-brand">{g.name}</Link>
+                    {can(user.role, "academics.read") ? <Link href={`/academics/groups/${g.id}`} className="font-medium hover:text-brand">{g.name}</Link> : <span className="font-medium">{g.name}</span>}
                     <span className="text-muted">{g.subject.name} · {g.level.name} · {g._count.enrollments}/{g.capacity} élèves</span>
                   </li>
                 ))}

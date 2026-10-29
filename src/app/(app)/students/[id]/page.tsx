@@ -38,6 +38,8 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   if (!s) notFound();
 
   const write = can(user.role, "students.write") && s.status !== "ARCHIVE";
+  // Minimisation : coordonnées complètes réservées à l'administration (le téléphone du parent reste visible pour les urgences)
+  const contacts = can(user.role, "students.write");
   const finance = can(user.role, "payments.read");
   const year = await db.schoolYear.findFirst({ where: { active: true } });
   const teacherGroups = user.role === "ENSEIGNANT" ? { group: { teacherId: user.teacherId ?? "" } } : {};
@@ -75,7 +77,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
         title={`${s.lastName} ${s.firstName}`}
         subtitle={<span>{s.code} · {s.level ? `${s.level.cycle.name} — ${s.level.name}` : "Niveau non renseigné"}{s.className && ` · ${s.className}`}{s.fullNameAr && <span dir="rtl" className="ml-2">{s.fullNameAr}</span>}</span>}
         actions={<>
-          <LinkButton href={`/students/${s.id}/fiche`} variant="secondary"><Printer className="size-4" /> Fiche d&apos;inscription</LinkButton>
+          {contacts && <LinkButton href={`/students/${s.id}/fiche`} variant="secondary"><Printer className="size-4" /> Fiche d&apos;inscription</LinkButton>}
           {can(user.role, "grades.read") && <LinkButton href={`/students/${s.id}/bulletin`} variant="secondary">Bulletin</LinkButton>}
           {finance && <LinkButton href={`/students/${s.id}/releve`} variant="secondary">Relevé de compte</LinkButton>}
           {finance && s.status !== "ARCHIVE" && can(user.role, "payments.write") && <LinkButton href={`/payments/new?student=${s.id}`}>Encaisser</LinkButton>}
@@ -105,7 +107,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
               {s.enrollments.map((e) => (
                 <tr key={e.id}>
                   <Td>{e.group.schoolYear.label}</Td>
-                  <Td><Link className="font-medium hover:text-brand" href={`/academics/groups/${e.groupId}`}>{e.group.name}</Link><span className="block text-xs text-muted">{e.group.level.name}</span></Td>
+                  <Td>{can(user.role, "academics.read") ? <Link className="font-medium hover:text-brand" href={`/academics/groups/${e.groupId}`}>{e.group.name}</Link> : <span className="font-medium">{e.group.name}</span>}<span className="block text-xs text-muted">{e.group.level.name}</span></Td>
                   <Td>{e.group.subject.name}</Td>
                   <Td className="text-xs">{formatDate(e.startDate)}{e.endDate && <> → {formatDate(e.endDate)}</>}</Td>
                   <Td className="tabular-nums">{formatMoney(e.monthlyFee)}
@@ -267,7 +269,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                   <p className="mt-1"><a href={`tel:${g.phone.replace(/\s/g, "")}`} className="hover:text-brand">{g.phone}</a>
                     {" · "}<a className="text-emerald-700" href={`https://wa.me/216${g.phone.replace(/\s/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a></p>
                   {g.phone2 && <p className="text-muted">{g.phone2}</p>}
-                  {g.email && <p className="text-muted">{g.email}</p>}
+                  {contacts && g.email && <p className="text-muted">{g.email}</p>}
                   {isPayer && <p className="mt-1 text-xs text-muted">Responsable des paiements</p>}
                   {write && (
                     <details className="mt-2">
@@ -311,8 +313,8 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
               <dt className="text-muted">Naissance</dt><dd>{formatDate(s.birthDate)}</dd>
               <dt className="text-muted">Sexe</dt><dd>{s.gender === "M" ? "Garçon" : s.gender === "F" ? "Fille" : "—"}</dd>
               <dt className="text-muted">Établissement</dt><dd>{s.school ?? "—"}</dd>
-              <dt className="text-muted">Téléphone</dt><dd>{s.phone ?? "—"}</dd>
-              <dt className="text-muted">Adresse</dt><dd>{s.address ?? "—"}</dd>
+              {contacts && <><dt className="text-muted">Téléphone</dt><dd>{s.phone ?? "—"}</dd></>}
+              {contacts && <><dt className="text-muted">Adresse</dt><dd>{s.address ?? "—"}</dd></>}
               <dt className="text-muted">Médical</dt><dd>{s.medicalNotes ?? "—"}</dd>
               <dt className="text-muted">Remarques</dt><dd>{s.notes ?? "—"}</dd>
               <dt className="text-muted">Dossier créé</dt><dd>{formatDate(s.createdAt)}</dd>

@@ -5,40 +5,41 @@ Application web de gestion du centre de soutien scolaire **VAMOS ACADEMY** (Keli
 
 > Conception, schéma de données, matrice des rôles et plan par étapes : **[docs/PROJECT_BLUEPRINT.md](docs/PROJECT_BLUEPRINT.md)**.
 
-## Démarrage
+## Démarrage local (développement)
 
 Prérequis : Node.js ≥ 20, PostgreSQL ≥ 14.
 
 ```bash
 npm install
-cp .env.example .env                 # renseigner DATABASE_URL
-npx prisma migrate deploy            # crée / met à jour les tables
-npm run db:seed                      # référentiel + compte admin
-npm run dev                          # http://localhost:3000
+cp .env.example .env                       # renseigner DATABASE_URL (et DEV_ADMIN_PASSWORD pour un compte local)
+npx prisma migrate deploy                  # crée / met à jour les tables
+npm run db:seed                            # référentiel (+ compte admin local si DEV_ADMIN_PASSWORD est défini)
+npm run db:seed:demo                       # facultatif : données FICTIVES (refusé si NODE_ENV=production)
+npm run dev                                # http://localhost:3000
 ```
 
-- Compte initial : `admin@vamos-academy.tn`, mot de passe = `SEED_ADMIN_PASSWORD` (défaut `ChangezMoi!2026`). **À changer immédiatement** (menu profil → *Mon profil & mot de passe*).
-- `npm run db:seed:demo` ajoute des données **fictives** marquées `isDemo` : badge **DÉMO** partout, mention sur les documents imprimés, suppression en un clic dans *Paramètres → Données de démonstration* (administrateur). Il crée aussi un compte de test par rôle : `responsable@`, `comptable@`, `enseignant@`, `lecture@demo.vamos-academy.tn` (mot de passe `Demo2026vamos`), supprimés avec la purge.
+- Aucun compte ni mot de passe par défaut. Hors développement, créer l'administrateur avec
+  `npm run admin:create -- --email … --name "…"` (mot de passe provisoire généré, changement forcé à la 1re connexion).
+- Les données de démonstration sont marquées **DÉMO** et créent un compte de test par rôle (`…@demo.vamos-academy.tn`,
+  mot de passe `Demo2026vamos`, **développement uniquement**). Suppression : *Paramètres → Données de démonstration*.
 
-## Commandes
+**Déploiement, sauvegarde, restauration, mise à jour : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md).**
+**Guide utilisateur (français) : [docs/GUIDE_UTILISATEUR.md](docs/GUIDE_UTILISATEUR.md).**
+
+## Vérifications
 
 | Commande | Rôle |
 |---|---|
-| `npm run dev` / `build` / `start` | Développement (dossier `.next-dev`) / build / production (dossier `.next`) |
-| `npm test` | 71 tests : unitaires + intégration (base `TEST_DATABASE_URL`, nom obligatoirement en `*_test`, vidée à chaque exécution) |
-| `npm run typecheck` · `npm run lint` | Vérifications statiques |
-| `npx prisma migrate deploy` | Applique les migrations |
-| `./scripts/backup.sh` | Sauvegarde `pg_dump` compressée avec rotation |
+| `npm run lint` · `npm run typecheck` | Analyse statique |
+| `npm test` | Tests unitaires et d'intégration (base `TEST_DATABASE_URL`, nom en `*_test`, **vidée** à chaque exécution) |
+| `npm run test:e2e` | Tests navigateur Playwright sur le build de production (base `E2E_DATABASE_URL` en `*_test`, vidée) ; 1re fois : `npx playwright install chromium` |
+| `npm run qa:crawl` | Parcours automatique de toutes les pages/liens par rôle (base de démonstration, serveur lancé ; `QA_BASE_URL`) |
+| `npm run build` | Build de production |
 
 ## Configuration
 
-| Variable | Rôle |
-|---|---|
-| `DATABASE_URL` | PostgreSQL |
-| `STORAGE_DIR` | Dossier des justificatifs de dépenses (défaut `./storage`, hors `public/`) — **à inclure dans les sauvegardes** |
-| `SEED_ADMIN_PASSWORD` | Mot de passe initial de l'administrateur (seed) |
-
-Aucun service d'envoi (SMS, WhatsApp, e-mail) n'est branché : les messages sont préparés puis envoyés par l'équipe.
+Voir `.env.example`. Variables principales : `DATABASE_URL`, `STORAGE_DIR` (justificatifs, à sauvegarder), `BACKUP_DIR`,
+`KEEP_DAYS`. Aucun service d'envoi (SMS, WhatsApp, e-mail) n'est branché : les messages sont préparés puis envoyés par l'équipe.
 
 ## Conventions
 

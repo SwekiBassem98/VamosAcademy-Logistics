@@ -11,6 +11,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    include: ["tests/**/*.test.ts"],
     fileParallelism: false,
     env: { TEST_DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://MAC@localhost:5432/vamos_gestion_test?schema=public" },
   },

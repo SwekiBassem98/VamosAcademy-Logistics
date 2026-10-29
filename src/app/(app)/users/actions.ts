@@ -18,12 +18,13 @@ export async function saveUser(id: string | null, _: ActionState, fd: FormData):
     if (id) {
       await db.user.update({
         where: { id },
-        data: { ...v, teacherId: link, active, ...(password ? { passwordHash: await hashPassword(password), failedLogins: 0, lockedUntil: null } : {}) },
+        data: { ...v, teacherId: link, active, ...(password ? { passwordHash: await hashPassword(password), failedLogins: 0, lockedUntil: null, mustChangePassword: id !== me.id } : {}) },
       });
       if (password || !active) await db.session.deleteMany({ where: { userId: id } });
     } else {
       if (!password) throw new BusinessError("Mot de passe initial obligatoire.");
-      id = (await db.user.create({ data: { ...v, teacherId: link, passwordHash: await hashPassword(password) } })).id;
+      // mot de passe provisoire : l'utilisateur devra le changer à sa première connexion
+      id = (await db.user.create({ data: { ...v, teacherId: link, passwordHash: await hashPassword(password), mustChangePassword: true } })).id;
     }
     await audit(me.id, "user.save", "User", id, { ...v, active, passwordChanged: !!password });
     revalidatePath("/users");

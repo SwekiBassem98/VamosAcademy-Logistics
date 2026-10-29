@@ -129,7 +129,7 @@ Légende priorité : **P1** = livré dans le MVP, **P2** = itération suivante, 
 ### 2.15 Sauvegardes, audit et sécurité (P1)
 - **Journal d'audit** : toute création/modification/annulation sensible (élèves, paiements, dépenses, utilisateurs, paramètres) avec auteur, date, entité, détail JSON.
 - Sauvegarde : script `pg_dump` quotidien (`scripts/backup.sh`) avec rotation ; procédure de restauration documentée.
-- Sécurité : mots de passe bcrypt (coût 12), sessions opaques stockées en base (jeton aléatoire 256 bits, seul le hash SHA‑256 est stocké), cookie `HttpOnly; SameSite=Lax; Secure` en production, expiration 12 h glissante (prolongée à mi-parcours), verrouillage après 5 échecs (15 min), validation Zod serveur, requêtes paramétrées (Prisma), aucune donnée sensible en URL.
+- Sécurité : mots de passe bcrypt (coût 12), sessions opaques stockées en base (jeton aléatoire 256 bits, seul le hash SHA‑256 est stocké), cookie `HttpOnly; SameSite=Lax; Secure` en production, expiration 12 h glissante et 7 jours maximum, verrouillage après 5 échecs (15 min) et limitation par IP, mot de passe provisoire à changer obligatoirement, administrateur initial via `npm run admin:create`, en-têtes CSP/HSTS, journaux sans données personnelles, validation Zod serveur, requêtes paramétrées (Prisma), aucune donnée sensible en URL.
 
 ---
 
@@ -294,6 +294,6 @@ tests/
 | **E7** v1 opérationnelle | Notes, disponibilités, conflits groupe/enseignant, archivage, doublons, réductions autorisées, historique, fiche d'inscription, 5 rôles, données de démo marquées | Tests d'intégration des actions par rôle ✅ |
 | **E8** v2 | Grille tarifaire, échéanciers, moyens de paiement, corrections tracées, justificatifs, paie enseignants, notifications, messages préparés, PDF/Excel, documents, filtres persistants, actions groupées | `tests/scenario.integration.test.ts` (critères 1 à 8) ✅ |
 | **E8b** P2 | Envoi réel SMS/WhatsApp (après accord), clôture et réinscription annuelle, portail parents, PDF serveur des autres documents | — |
-| **E9** Exploitation | Sauvegardes, déploiement, monitoring | Restauration testée sur base vierge |
+| **E9** Exploitation | Audit sécurité, sauvegardes, déploiement, supervision (`/api/health`) | Restauration testée sur base vierge ✅ — voir `docs/RAPPORT_AUDIT.md` |
 
 État d'avancement : voir `README.md` § « État ».

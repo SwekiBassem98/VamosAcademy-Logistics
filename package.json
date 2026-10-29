@@ -12,7 +12,10 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "SEED_DEMO=true tsx prisma/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "admin:create": "tsx scripts/create-admin.ts",
+    "test:e2e": "playwright test",
+    "qa:crawl": "tsx scripts/qa-crawl.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -30,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",

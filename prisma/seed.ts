@@ -11,6 +11,7 @@ import { defaultBillingMonths, dueDateFor, billableMonths } from "../src/lib/bil
 import { DEFAULT_TEMPLATES } from "../src/lib/templates";
 
 const db = new PrismaClient();
+const isProduction = process.env.NODE_ENV === "production";
 export const DEMO_EMAIL_DOMAIN = "demo.vamos-academy.tn";
 
 const LEVELS: Record<string, { ar: string; order: number; levels: string[] }> = {
@@ -68,16 +69,30 @@ async function main() {
   }
   for (const t of DEFAULT_TEMPLATES) await db.messageTemplate.upsert({ where: { code: t.code }, update: {}, create: t });
 
-  const adminEmail = "admin@vamos-academy.tn";
-  const pwd = process.env.SEED_ADMIN_PASSWORD ?? "ChangezMoi!2026";
-  await db.user.upsert({
-    where: { email: adminEmail },
-    update: {},
-    create: { email: adminEmail, fullName: "Administrateur", role: "ADMIN", passwordHash: await bcrypt.hash(pwd, 12) },
-  });
-  console.log(`✔ Référentiel prêt. Admin : ${adminEmail} (mot de passe : SEED_ADMIN_PASSWORD ou valeur par défaut — à changer)`);
+  console.log("✔ Référentiel prêt (centre, année 2026-2027, niveaux, matières, salles, catégories, moyens de paiement, modèles).");
 
-  if (process.env.SEED_DEMO === "true") await demo(year.id, year.billingMonths, year.dueDay);
+  // Aucun compte administrateur avec mot de passe par défaut : en production, utiliser `npm run admin:create`.
+  // En développement uniquement, DEV_ADMIN_PASSWORD permet de créer un compte local (changement forcé à la 1re connexion).
+  const devPwd = process.env.DEV_ADMIN_PASSWORD;
+  if (devPwd && !isProduction) {
+    await db.user.upsert({
+      where: { email: "admin@vamos-academy.tn" },
+      update: {},
+      create: { email: "admin@vamos-academy.tn", fullName: "Administrateur", role: "ADMIN", passwordHash: await bcrypt.hash(devPwd, 12) },
+    });
+    console.log("✔ Compte de développement admin@vamos-academy.tn créé (mot de passe : DEV_ADMIN_PASSWORD).");
+  } else if (!(await db.user.count({ where: { role: "ADMIN", active: true } }))) {
+    console.log('ℹ Aucun administrateur : créez-le avec  npm run admin:create -- --email … --name "…"');
+  }
+
+  if (process.env.SEED_DEMO === "true") {
+    if (isProduction && process.env.ALLOW_DEMO_SEED !== "true") {
+      console.error("✖ Données de démonstration refusées en production (NODE_ENV=production). Utilisez une base de test.");
+      process.exitCode = 1;
+      return;
+    }
+    await demo(year.id, year.billingMonths, year.dueDay);
+  }
 }
 
 // ───────────────────────── Démonstration (fictif) ─────────────────────────

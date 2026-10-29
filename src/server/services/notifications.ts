@@ -1,6 +1,7 @@
 import "server-only";
 import type { NotificationType, Prisma } from "@prisma/client";
 import { db } from "../db";
+import { logError } from "../log";
 import type { CurrentUser } from "../auth";
 import { can, type Permission } from "@/lib/permissions";
 import { formatDate, formatMoney, parseDay, todayISO } from "@/lib/format";
@@ -24,7 +25,7 @@ export async function notify(n: NotifyInput) {
       await db.notification.create({ data: { ...n } });
     }
   } catch (e) {
-    console.error("notification", e);
+    logError("notification", e);
   }
 }
 

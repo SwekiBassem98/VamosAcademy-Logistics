@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { AppShell, type NavItem } from "@/components/sidebar";
 import { requireUser, logout } from "@/server/auth";
 import { db } from "@/server/db";
@@ -35,6 +36,8 @@ async function logoutAction() {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  // Compte initial ou mot de passe réinitialisé : aucune autre page tant que le mot de passe n'est pas changé
+  if (user.mustChangePassword && (await headers()).get("x-pathname") !== "/profile") redirect("/profile");
   const [year, { items: notices, unread }] = await Promise.all([
     db.schoolYear.findFirst({ where: { active: true }, select: { label: true } }),
     noticesFor(user),

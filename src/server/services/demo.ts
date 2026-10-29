@@ -11,7 +11,8 @@ export async function demoCounts() {
     db.group.count({ where: { isDemo: true } }),
     db.expense.count({ where: { isDemo: true } }),
   ]);
-  return { students, guardians, teachers, groups, expenses, total: students + guardians + teachers + groups + expenses };
+  const accounts = await db.user.count({ where: { email: { endsWith: "@demo.vamos-academy.tn" } } });
+  return { students, guardians, teachers, groups, expenses, accounts, total: students + guardians + teachers + groups + expenses + accounts };
 }
 
 /** Supprime toutes les données marquées démo, sans toucher aux données réelles. */

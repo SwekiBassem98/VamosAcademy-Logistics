@@ -98,8 +98,8 @@ export const teacherSchema = z.object({
   email: opt.refine((v) => !v || z.string().email().safeParse(v).success, "E-mail invalide"),
   payMode: z.enum(["HORAIRE", "MENSUEL", "POURCENTAGE", "PAR_SEANCE"]),
   payRate: req("Taux"),
-  subjectIds: z.array(z.string()).default([]),
-  cycleIds: z.array(z.string()).default([]),
+  subjectIds: z.array(z.string().max(40)).max(200).default([]),
+  cycleIds: z.array(z.string().max(40)).max(200).default([]),
   notes: opt,
 });
 
@@ -163,7 +163,7 @@ export const paymentSchema = z.object({
   reference: opt,
   paidAt: day("Date"),
   note: opt,
-  invoiceIds: z.array(z.string()).default([]),
+  invoiceIds: z.array(z.string().max(40)).max(200).default([]),
 });
 
 export const expenseSchema = z.object({

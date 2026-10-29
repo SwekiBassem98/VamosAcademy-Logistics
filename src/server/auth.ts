@@ -10,7 +10,8 @@ import { can, type Permission } from "@/lib/permissions";
 import { audit } from "./audit";
 
 export const SESSION_COOKIE = "vamos_session";
-const SESSION_HOURS = 12;
+const SESSION_HOURS = 12; // inactivité maximale
+const SESSION_MAX_DAYS = 7; // durée de vie absolue, même en cas d'activité continue
 const MAX_FAILED = 5;
 const LOCK_MINUTES = 15;
 
@@ -20,6 +21,7 @@ export interface CurrentUser {
   email: string;
   role: Role;
   teacherId: string | null;
+  mustChangePassword: boolean;
 }
 
 const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
@@ -63,7 +65,8 @@ export async function login(email: string, password: string): Promise<LoginResul
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // HTTPS obligatoire en production ; COOKIE_SECURE=false uniquement pour un test local de la version de production
+    secure: process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false",
     path: "/",
   });
   await audit(user.id, "user.login", "User", user.id);
@@ -88,6 +91,10 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!token) return null;
   const session = await db.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   if (!session || session.expiresAt < new Date() || !session.user.active) return null;
+  if (Date.now() - session.createdAt.getTime() > SESSION_MAX_DAYS * 86400_000) {
+    await db.session.delete({ where: { id: session.id } }).catch(() => undefined);
+    return null;
+  }
   const remaining = session.expiresAt.getTime() - Date.now();
   if (remaining < (SESSION_HOURS / 2) * 3600_000) {
     await db.session.update({
@@ -95,8 +102,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       data: { expiresAt: new Date(Date.now() + SESSION_HOURS * 3600_000) },
     });
   }
-  const { id, fullName, email, role, teacherId } = session.user;
-  return { id, fullName, email, role, teacherId };
+  const { id, fullName, email, role, teacherId, mustChangePassword } = session.user;
+  return { id, fullName, email, role, teacherId, mustChangePassword };
 });
 
 export async function requireUser(): Promise<CurrentUser> {
@@ -106,9 +113,15 @@ export async function requireUser(): Promise<CurrentUser> {
 }
 
 export class ForbiddenError extends Error {
-  constructor() {
-    super("Accès refusé : vous n'avez pas la permission nécessaire.");
+  constructor(message = "Accès refusé : vous n'avez pas la permission nécessaire.") {
+    super(message);
   }
+}
+
+/** Pour les routes API : utilisateur autorisé (connecté, mot de passe à jour), sinon null. */
+export async function apiUser(): Promise<CurrentUser | null> {
+  const u = await getCurrentUser();
+  return u && !u.mustChangePassword ? u : null;
 }
 
 /** Pour les pages : retourne l'utilisateur, ou null s'il n'a pas la permission (afficher <Forbidden/>). */
@@ -120,6 +133,7 @@ export async function pageUser(permission?: Permission): Promise<CurrentUser | n
 /** À appeler en tête de chaque Server Action protégée. */
 export async function requirePermission(permission: Permission): Promise<CurrentUser> {
   const u = await requireUser();
+  if (u.mustChangePassword) throw new ForbiddenError("Accès refusé : changez d'abord votre mot de passe (menu profil).");
   if (!can(u.role, permission)) throw new ForbiddenError();
   return u;
 }

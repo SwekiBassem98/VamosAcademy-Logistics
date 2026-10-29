@@ -11,7 +11,7 @@ import { formatDate, formatMoney, formatDateTime, formatMinutes, WEEKDAYS } from
 export const metadata = { title: "Fiche d'inscription" };
 
 export default async function Fiche({ params }: { params: Promise<{ id: string }> }) {
-  const user = await pageUser("students.read");
+  const user = await pageUser("students.write"); // document administratif complet (adresse, contacts)
   if (!user) return <Forbidden />;
   const { id } = await params;
   const [s, center, year] = await Promise.all([
