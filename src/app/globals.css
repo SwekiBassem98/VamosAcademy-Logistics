@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+/* Identité VAMOS ACADEMY — rouge du logo, bleu marine, blanc, gris clair */
+@theme {
+  --color-brand: #c1272d;
+  --color-brand-dark: #9b1c22;
+  --color-brand-50: #fdf2f2;
+  --color-brand-100: #fbe1e2;
+  --color-navy: #14213d;
+  --color-navy-light: #22335a;
+  --color-surface: #f5f6f8;
+  --color-line: #e5e7eb;
+  --color-muted: #6b7280;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-surface);
+  color: #111827;
+}
+
+/* Champs de formulaire — dans la couche components pour que les utilitaires (w-48, py-1…) puissent les surcharger */
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm shadow-xs outline-none transition placeholder:text-gray-400 focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-gray-50;
+  }
+  .input[aria-invalid="true"] {
+    @apply border-red-500;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}

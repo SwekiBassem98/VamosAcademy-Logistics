@@ -1,0 +1,482 @@
+// VAMOS ACADEMY — schéma de gestion du centre
+// Montants en millimes (Int) : 45,000 DT = 45000.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────── Sécurité ─────────────
+
+enum Role {
+  ADMIN
+  RESPONSABLE // responsable administratif
+  COMPTABLE
+  ENSEIGNANT
+  LECTURE // lecture seule
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  fullName     String
+  passwordHash String
+  role         Role
+  active       Boolean    @default(true)
+  failedLogins Int        @default(0)
+  lockedUntil  DateTime?
+  lastLoginAt  DateTime?
+  teacherId    String?    @unique
+  teacher      Teacher?   @relation(fields: [teacherId], references: [id])
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String // ex. "student.create", "payment.cancel"
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ───────────── Paramètres ─────────────
+
+model CenterSettings {
+  id            Int      @id @default(1)
+  name          String   @default("VAMOS ACADEMY")
+  addressFr     String   @default("Rue de Gaza, Cité Riadh, Kelibia")
+  addressAr     String   @default("نهج غزة، حي الرياض، قليبية")
+  phone         String   @default("20 807 657")
+  email         String?
+  receiptFooter String   @default("Merci de votre confiance. VAMOS ACADEMY… طريقك نحو النجاح")
+  updatedAt     DateTime @updatedAt
+}
+
+model SchoolYear {
+  id            String    @id @default(cuid())
+  label         String    @unique // "2026-2027"
+  startDate     DateTime
+  endDate       DateTime
+  // Mois facturés, au format "AAAA-MM"
+  billingMonths String[]
+  dueDay        Int       @default(10) // jour limite de paiement du mois
+  active        Boolean   @default(false)
+  groups        Group[]
+  payments      Payment[]
+  expenses      Expense[]
+  createdAt     DateTime  @default(now())
+}
+
+// ───────────── Structure pédagogique ─────────────
+
+model Cycle {
+  id       String         @id @default(cuid())
+  name     String         @unique // Primaire, Collège, Secondaire
+  nameAr   String?
+  order    Int
+  levels   Level[]
+  teachers TeacherCycle[]
+}
+
+model Level {
+  id       String    @id @default(cuid())
+  cycleId  String
+  cycle    Cycle     @relation(fields: [cycleId], references: [id])
+  name     String // "9e année de base"
+  order    Int
+  groups   Group[]
+  students Student[]
+
+  @@unique([cycleId, name])
+}
+
+model Subject {
+  id       String           @id @default(cuid())
+  code     String           @unique
+  name     String
+  color    String           @default("#C1272D")
+  groups   Group[]
+  teachers TeacherSubject[]
+}
+
+model Room {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  capacity Int
+  groups   Group[]
+  slots    ScheduleSlot[]
+}
+
+enum PayMode {
+  HORAIRE
+  MENSUEL
+  POURCENTAGE
+}
+
+model Teacher {
+  id           String                @id @default(cuid())
+  firstName    String
+  lastName     String
+  phone        String
+  email        String?
+  payMode      PayMode               @default(HORAIRE)
+  // millimes/heure, millimes/mois, ou pourcentage (0-100)
+  payRate      Int                   @default(0)
+  active       Boolean               @default(true)
+  notes        String?
+  isDemo       Boolean               @default(false)
+  subjects     TeacherSubject[]
+  cycles       TeacherCycle[]
+  availability TeacherAvailability[]
+  groups       Group[]
+  user         User?
+  createdAt    DateTime              @default(now())
+}
+
+model TeacherCycle {
+  teacherId String
+  cycleId   String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  cycle     Cycle   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, cycleId])
+}
+
+// Disponibilités hebdomadaires déclarées par l'enseignant
+model TeacherAvailability {
+  id        String  @id @default(cuid())
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  weekday   Int // 1 = lundi … 7 = dimanche
+  startMin  Int
+  endMin    Int
+
+  @@index([teacherId])
+}
+
+model TeacherSubject {
+  teacherId String
+  subjectId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, subjectId])
+}
+
+model Group {
+  id              String              @id @default(cuid())
+  name            String
+  schoolYearId    String
+  schoolYear      SchoolYear          @relation(fields: [schoolYearId], references: [id])
+  levelId         String
+  level           Level               @relation(fields: [levelId], references: [id])
+  subjectId       String
+  subject         Subject             @relation(fields: [subjectId], references: [id])
+  teacherId       String?
+  teacher         Teacher?            @relation(fields: [teacherId], references: [id])
+  roomId          String?
+  room            Room?               @relation(fields: [roomId], references: [id])
+  capacity        Int                 @default(12)
+  monthlyFee      Int // millimes
+  registrationFee Int                 @default(0)
+  active          Boolean             @default(true)
+  isDemo          Boolean             @default(false)
+  enrollments     Enrollment[]
+  slots           ScheduleSlot[]
+  sessions        AttendanceSession[]
+  assessments     Assessment[]
+  createdAt       DateTime            @default(now())
+
+  @@unique([schoolYearId, name])
+}
+
+model ScheduleSlot {
+  id       String @id @default(cuid())
+  groupId  String
+  group    Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  roomId   String
+  room     Room   @relation(fields: [roomId], references: [id])
+  weekday  Int // 1 = lundi … 7 = dimanche
+  startMin Int // minutes depuis minuit
+  endMin   Int
+
+  @@index([weekday])
+}
+
+// ───────────── Élèves ─────────────
+
+enum Gender {
+  M
+  F
+}
+
+enum StudentStatus {
+  PREINSCRIT
+  ACTIF
+  SUSPENDU
+  ARCHIVE
+}
+
+model Student {
+  id           String             @id @default(cuid())
+  code         String             @unique // VA-2026-0001
+  firstName    String
+  lastName     String
+  fullNameAr   String?
+  birthDate    DateTime?
+  gender       Gender?
+  school       String?
+  className    String? // classe fréquentée à l'école (ex. « 9e B »)
+  levelId      String?
+  level        Level?             @relation(fields: [levelId], references: [id])
+  phone        String?
+  address      String?
+  medicalNotes String?
+  notes        String?
+  status       StudentStatus      @default(ACTIF)
+  archivedAt   DateTime?
+  isDemo       Boolean            @default(false)
+  guardians    StudentGuardian[]
+  enrollments  Enrollment[]
+  payments     Payment[]
+  attendance   AttendanceRecord[]
+  grades       Grade[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([lastName, firstName])
+}
+
+model Guardian {
+  id         String            @id @default(cuid())
+  firstName  String
+  lastName   String
+  phone      String
+  phone2     String?
+  email      String?
+  profession String?
+  cin        String?
+  isDemo     Boolean           @default(false)
+  students   StudentGuardian[]
+  createdAt  DateTime          @default(now())
+
+  @@index([phone])
+}
+
+model StudentGuardian {
+  studentId   String
+  guardianId  String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian    Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  relation    String // Père, Mère, Tuteur…
+  isEmergency Boolean  @default(true)
+  isPayer     Boolean  @default(false)
+
+  @@id([studentId, guardianId])
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  TERMINEE
+}
+
+model Enrollment {
+  id              String           @id @default(cuid())
+  studentId       String
+  student         Student          @relation(fields: [studentId], references: [id])
+  groupId         String
+  group           Group            @relation(fields: [groupId], references: [id])
+  startDate       DateTime
+  endDate         DateTime?
+  baseFee         Int              @default(0) // tarif du groupe au moment de l'inscription
+  monthlyFee      Int // tarif appliqué après remise
+  discountTypeId  String?
+  discountType    DiscountType?    @relation(fields: [discountTypeId], references: [id])
+  discountPercent Int              @default(0)
+  discountNote    String?
+  status          EnrollmentStatus @default(ACTIVE)
+  invoices        Invoice[]
+  createdAt       DateTime         @default(now())
+
+  @@unique([studentId, groupId])
+}
+
+// Réductions autorisées, configurées par l'administration
+model DiscountType {
+  id          String       @id @default(cuid())
+  name        String       @unique // Fratrie, Bourse, Fidélité…
+  percent     Int // 1-100
+  active      Boolean      @default(true)
+  enrollments Enrollment[]
+}
+
+// ───────────── Finances ─────────────
+
+enum InvoiceKind {
+  MENSUALITE
+  INSCRIPTION
+}
+
+model Invoice {
+  id           String              @id @default(cuid())
+  enrollmentId String
+  enrollment   Enrollment          @relation(fields: [enrollmentId], references: [id])
+  kind         InvoiceKind         @default(MENSUALITE)
+  period       String // "AAAA-MM" ou "INSCRIPTION"
+  amount       Int
+  dueDate      DateTime
+  allocations  PaymentAllocation[]
+  createdAt    DateTime            @default(now())
+
+  @@unique([enrollmentId, period])
+  @@index([dueDate])
+}
+
+enum PaymentMethod {
+  ESPECES
+  CHEQUE
+  VIREMENT
+  D17
+}
+
+model Payment {
+  id           String              @id @default(cuid())
+  receiptNo    String              @unique
+  studentId    String
+  student      Student             @relation(fields: [studentId], references: [id])
+  schoolYearId String
+  schoolYear   SchoolYear          @relation(fields: [schoolYearId], references: [id])
+  amount       Int
+  method       PaymentMethod
+  reference    String?
+  paidAt       DateTime
+  note         String?
+  createdById  String?
+  cancelledAt  DateTime?
+  cancelReason String?
+  allocations  PaymentAllocation[]
+  createdAt    DateTime            @default(now())
+
+  @@index([paidAt])
+}
+
+model PaymentAllocation {
+  id        String  @id @default(cuid())
+  paymentId String
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  amount    Int
+}
+
+model ExpenseCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  expenses Expense[]
+}
+
+model Expense {
+  id           String          @id @default(cuid())
+  schoolYearId String
+  schoolYear   SchoolYear      @relation(fields: [schoolYearId], references: [id])
+  categoryId   String
+  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
+  label        String
+  amount       Int
+  method       PaymentMethod   @default(ESPECES)
+  spentAt      DateTime
+  isDemo       Boolean         @default(false)
+  createdById  String?
+  createdAt    DateTime        @default(now())
+
+  @@index([spentAt])
+}
+
+// ───────────── Présences & notes ─────────────
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  RETARD
+  EXCUSE
+}
+
+model AttendanceSession {
+  id      String             @id @default(cuid())
+  groupId String
+  group   Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  date    DateTime           @db.Date
+  topic   String?
+  records AttendanceRecord[]
+
+  @@unique([groupId, date])
+}
+
+model AttendanceRecord {
+  id        String            @id @default(cuid())
+  sessionId String
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student           @relation(fields: [studentId], references: [id])
+  status    AttendanceStatus
+  note      String? // motif / justificatif
+
+  @@unique([sessionId, studentId])
+}
+
+enum AssessmentKind {
+  DEVOIR
+  TEST
+  EXAMEN_BLANC
+  ORAL
+}
+
+model Assessment {
+  id          String         @id @default(cuid())
+  groupId     String
+  group       Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  title       String
+  kind        AssessmentKind @default(DEVOIR)
+  term        Int            @default(1) // trimestre 1-3
+  date        DateTime       @db.Date
+  coefficient Int            @default(1)
+  maxScore    Int            @default(20)
+  grades      Grade[]
+  createdAt   DateTime       @default(now())
+}
+
+model Grade {
+  id           String     @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student    @relation(fields: [studentId], references: [id])
+  score        Float?
+  comment      String?
+
+  @@unique([assessmentId, studentId])
+}
