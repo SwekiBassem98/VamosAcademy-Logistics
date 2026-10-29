@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UPLOAD_LIMIT_LABEL } from "@/lib/uploads";
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
 import { Card, PageHeader, Forbidden, Badge, DemoBadge } from "@/components/ui";
@@ -65,7 +66,7 @@ export default async function ExpensePage({ params }: { params: Promise<{ id: st
           )}
           {can(user.role, "expenses.write") && !e.cancelledAt && (
             <Form action={attachToExpense.bind(null, e.id)} className="mt-4 flex flex-wrap items-end gap-2 border-t border-line pt-4" resetOnSuccess>
-              <Input label="Ajouter (PDF, JPG, PNG — 5 Mo max.)" name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="flex-1" />
+              <Input label={`Ajouter (PDF, JPG, PNG — ${UPLOAD_LIMIT_LABEL})`} name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="flex-1" />
               <Submit variant="secondary">Joindre</Submit>
             </Form>
           )}

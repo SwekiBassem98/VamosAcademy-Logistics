@@ -4,6 +4,7 @@ import { createContext, startTransition, useActionState, useContext, useEffect, 
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { Button, Field } from "./ui";
+import { prepareUploads } from "./upload-prep";
 
 export type ActionState = {
   ok?: boolean;
@@ -26,6 +27,8 @@ export function Form({
   action, children, className, resetOnSuccess = false, id,
 }: { action: Action; children: ReactNode; className?: string; resetOnSuccess?: boolean; id?: string }) {
   const [state, formAction, pending] = useActionState(async (prev: ActionState, fd: FormData): Promise<ActionState> => {
+    const tooBig = await prepareUploads(fd);
+    if (tooBig) return { error: tooBig };
     try {
       return await action(prev, fd);
     } catch (e) {

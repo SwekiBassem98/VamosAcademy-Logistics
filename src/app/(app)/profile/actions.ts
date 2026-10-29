@@ -11,7 +11,7 @@ import { hit } from "@/server/rate-limit";
 export async function changePassword(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async () => {
     const user = await requireUser();
-    if (!hit(`pwd:${user.id}`, 10, 15 * 60_000).allowed) throw new BusinessError("Trop de tentatives. Réessayez dans quelques minutes.");
+    if (!(await hit(`pwd:${user.id}`, 10, 15 * 60_000)).allowed) throw new BusinessError("Trop de tentatives. Réessayez dans quelques minutes.");
     const v = passwordChangeSchema.parse(formToObject(fd));
     if (v.next === v.current) throw new BusinessError("Le nouveau mot de passe doit être différent de l'actuel.");
     const u = await db.user.findUniqueOrThrow({ where: { id: user.id } });

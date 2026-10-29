@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UPLOAD_LIMIT_LABEL } from "@/lib/uploads";
 import type { Prisma } from "@prisma/client";
 import { Paperclip } from "lucide-react";
 import { Plus } from "lucide-react";
@@ -52,7 +53,7 @@ export default async function Expenses({ searchParams }: { searchParams: Promise
               <Select label="Moyen de paiement *" name="modeId" options={modeOptions(modes)} />
               <Input label="Référence (n° chèque, facture…)" name="reference" />
               <Input label="Date *" name="spentAt" type="date" defaultValue={todayISO()} max={todayISO()} />
-              <Input label="Justificatifs (PDF, JPG, PNG — 5 Mo max.)" name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="sm:col-span-2" />
+              <Input label={`Justificatifs (PDF, JPG, PNG — ${UPLOAD_LIMIT_LABEL})`} name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="sm:col-span-2" />
               <FormActions><Submit>Enregistrer la dépense</Submit></FormActions>
             </Form>
             <div className="mt-8 border-t border-line pt-5">

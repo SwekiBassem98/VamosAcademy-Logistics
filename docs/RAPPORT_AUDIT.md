@@ -54,7 +54,12 @@ rapports par période, notifications avec suivi, messages préparés (envoi manu
   par vitest 5 (majeure) à planifier.
   Node.js requis : ≥ 20.19 (Prisma 7).
 - **Déploiement réel non testé** : les fichiers `deploy/` (systemd, nginx, cron) et la procédure n'ont pas été exécutés sur un serveur.
-- **Limitation des tentatives en mémoire** : valable pour une seule instance ; remise à zéro au redémarrage.
+- **Limitation des tentatives — corrigé (30/10/2026)** : stockée en base (table `RateLimit`), partagée entre instances
+  et conservée au redémarrage (compatible Vercel).
+- **Préparation Vercel (30/10/2026)** : justificatifs stockés en base (pas de disque persistant sur Vercel), 4 Mo par envoi
+  (limite Vercel de 4,5 Mo ; photos allégées dans le navigateur), migrations au build de production uniquement, build sans base.
+  Vérifié en local (Vitest 80/80, Playwright 10/10, `qa:crawl` avec `VERCEL=1` : 0 problème). **Un déploiement réel sur
+  Vercel/Neon reste à faire** : procédure et contrôles dans `docs/DEPLOIEMENT_VERCEL.md`.
 - **CSP avec `'unsafe-inline'`** pour les scripts (exigence de Next.js sans nonce) : protection XSS partielle, compensée par
   l'échappement systématique de React (aucun HTML injecté).
 - **Historique Git** : les deux premiers commits publiés contiennent l'ancien mot de passe par défaut dans la documentation.
