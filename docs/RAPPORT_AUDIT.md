@@ -61,7 +61,38 @@ rapports par période, notifications avec suivi, messages préparés (envoi manu
   Il n'est plus utilisé par aucun code ; ne jamais l'employer pour un compte réel.
 - **Pas d'envoi SMS/WhatsApp/e-mail** (volontaire), pas de PDF serveur pour les documents autres que les reçus (impression navigateur).
 - **Rémunérations** attribuées à l'enseignant actuel du groupe ; **logo** en basse résolution.
-- **Accessibilité** : non auditée avec un outil dédié.
+- **Accessibilité** : objectif WCAG 2.2 AA appliqué à la conception (contrastes ≥ 4,5:1, focus visible, cibles 44 px,
+  libellés et erreurs reliés aux champs, dialogues natifs à focus piégé, lien d'évitement, zoom autorisé), vérifié par les
+  tests Playwright et des contrôles manuels ; **pas encore audité avec un outil dédié** (axe, lecteur d'écran réel).
+
+## 4 bis. Refonte UI/UX mobile-first (30/10/2026)
+
+Détail : `docs/REFONTE_UI.md` (audit avant travaux, système de design, stratégie responsive par module).
+Aucune migration, aucune modification des règles métier, des permissions serveur, des montants (millimes) ni des journaux d'audit.
+
+| Vérification | Résultat |
+|---|---|
+| ESLint, TypeScript | 0 erreur, 0 avertissement |
+| Vitest (PostgreSQL `vamos_gestion_test`) | 78 / 78 |
+| Playwright, build de production, base `vamos_e2e_test` | 9 / 9 (5 existants + 4 nouveaux, voir ci-dessous) |
+| `npm run build` | réussi |
+| `qa:crawl` (`next start -p 3100`, base `vamos_gestion`, `COOKIE_SECURE=false`) | 427 pages/liens, 5 rôles, 0 problème |
+
+Nouveaux tests Playwright (`e2e/responsive.spec.ts`) : ~40 routes (listes, fiches, formulaires, documents imprimables) sans
+défilement horizontal à 320, 390 et 768 px, pages principales à 360, 375, 430, 1024, 1280 et 1440 px ; menu, recherche,
+filtres repliés, modification d'un dossier dans une feuille et confirmation en feuille basse sur téléphone ; appel puis
+encaissement sur téléphone ; onglets et refus d'accès pour chacun des 5 rôles.
+Problèmes trouvés et corrigés pendant ces contrôles : débordements à 320 px (paramètres, utilisateurs, bulletin) ;
+lien « Rapports » du tableau de bord affiché au rôle Responsable sans droit d'accès ; le crawler suivait sans fin les liens
+« veille / lendemain » des présences (dates désormais regroupées par forme d'URL).
+
+Limites connues de la refonte :
+- Contrôles sur navigateur Chromium (émulation de largeur et de toucher) ; **non testé sur iPhone/Safari ni sur un appareil réel**.
+- Le relevé de notes et les grandes grilles imprimables (feuille de présence) restent des tableaux défilant dans leur cadre
+  sur téléphone (données réellement tabulaires).
+- Pas de mode sombre ; pas de vue « salles » séparée (occupation affichée dans *Groupes, salles & cours* et sur le tableau de bord).
+- Réinscription en masse vers une nouvelle année toujours non disponible (signalée dans les paramètres).
+- Logo source en basse résolution (244 × 128 px).
 
 ## 5. Lancer et déployer
 

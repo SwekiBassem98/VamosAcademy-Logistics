@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { PageHeader, Table, Td, Forbidden, DemoBadge } from "@/components/ui";
+import { PageHeader, Table, Td, Forbidden, DemoBadge, Phone } from "@/components/ui";
 import { FilterBar, Pagination, SortLink, listParams, type Params } from "@/components/table-tools";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
@@ -28,19 +28,18 @@ export default async function Guardians({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Parents & tuteurs" subtitle={`${total} contact(s). Les parents s'ajoutent et se modifient depuis le dossier de l'élève ; un même téléphone relie automatiquement les frères et sœurs.`} />
-      <FilterBar params={params}>
-        <input name="q" defaultValue={q} placeholder="Nom ou téléphone…" className="input w-full sm:w-72" aria-label="Rechercher" />
-      </FilterBar>
-      <Table head={[<SortLink key="n" base={base} params={params} field="lastName" label="Nom" />, "Téléphone", "Téléphone 2", "E-mail", "Enfants"]} empty={guardians.length === 0}>
+      <FilterBar params={params} submitLabel="Rechercher"
+        search={<input name="q" type="search" defaultValue={q} placeholder="Nom ou téléphone…" className="input" aria-label="Rechercher un parent" />} />
+      <Table head={[<SortLink key="n" base={base} params={params} field="lastName" label="Nom" />, "Téléphone", "Téléphone 2", "E-mail", "Enfants"]} empty={guardians.length === 0} emptyText="Aucun parent trouvé." caption="Parents et tuteurs">
         {guardians.map((g) => (
           <tr key={g.id}>
-            <Td className="font-medium text-navy">{g.lastName} {g.firstName}<DemoBadge show={g.isDemo} /></Td>
-            <Td><a href={`tel:${g.phone.replace(/\s/g, "")}`} className="hover:text-brand">{g.phone}</a></Td>
-            <Td>{g.phone2 ?? "—"}</Td>
-            <Td>{g.email ?? "—"}</Td>
-            <Td className="whitespace-normal">
+            <Td cell="primary" className="font-semibold text-navy">{g.lastName} {g.firstName}<DemoBadge show={g.isDemo} /></Td>
+            <Td><Phone value={g.phone} /></Td>
+            <Td><Phone value={g.phone2} /></Td>
+            <Td className="break-all">{g.email ?? "—"}</Td>
+            <Td cell="wide">
               {g.students.map(({ student: s, relation }) => (
-                <Link key={s.id} href={`/students/${s.id}`} className="mr-3 inline-block text-brand hover:underline">{s.firstName} {s.lastName} <span className="text-muted">({relation})</span></Link>
+                <Link key={s.id} href={`/students/${s.id}`} className="mr-3 inline-flex min-h-8 items-center text-brand hover:underline">{s.firstName} {s.lastName} <span className="text-muted">({relation})</span></Link>
               ))}
             </Td>
           </tr>

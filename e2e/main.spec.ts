@@ -18,7 +18,7 @@ test("connexion : erreur claire puis accès au tableau de bord", async ({ page }
   await page.getByLabel("Mot de passe", { exact: true }).fill(ADMIN.password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { name: /Bonjour/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Bonjour|Bonsoir/ })).toBeVisible();
   await expect(page.getByText("Données de démonstration présentes")).toBeVisible();
 });
 

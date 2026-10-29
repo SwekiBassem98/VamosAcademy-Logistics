@@ -109,6 +109,11 @@ sudo systemctl restart vamos
 curl -s https://gestion.vamos-academy.tn/api/health   # 3. vérification
 ```
 
+Mise à jour « refonte UI mobile-first » (30/10/2026) : aucune migration de base, aucune nouvelle variable d'environnement.
+La procédure ci-dessus suffit (`npm ci` récupère les mêmes dépendances ; la police de titres Plus Jakarta Sans est téléchargée
+au moment du build par `next/font`, comme Inter : le serveur de build doit avoir accès à Internet, le serveur d'exécution non).
+Après le redémarrage, vider le cache du navigateur n'est pas nécessaire (fichiers statiques versionnés).
+
 En cas d'échec : `git checkout <version précédente>`, `npm ci && npm run build`, puis restauration de la sauvegarde si une
 migration a été appliquée.
 
@@ -127,4 +132,5 @@ migration a été appliquée.
 - [ ] Aucune donnée de démonstration (pas d'avertissement sur le tableau de bord)
 - [ ] Logo officiel HD placé dans `public/brand/logo.png`
 - [ ] Paramètres du centre, année scolaire, grille tarifaire, moyens de paiement et réductions vérifiés
+- [ ] Interface vérifiée sur un téléphone réel du centre (connexion, appel, encaissement) et sur le poste d'accueil
 - [ ] Sauvegarde nocturne active et copie hors serveur organisée ; restauration testée

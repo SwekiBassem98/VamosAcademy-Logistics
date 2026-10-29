@@ -12,8 +12,8 @@ export async function GroupFields({ g }: { g?: Group }) {
     db.room.findMany({ orderBy: { name: "asc" } }),
   ]);
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Input label="Nom du groupe *" name="name" placeholder="Maths 9e — G1" defaultValue={g?.name} wrapperClass="lg:col-span-2" />
+    <div className="@container"><div className="grid gap-4 @md:grid-cols-2 @4xl:grid-cols-4">
+      <Input label="Nom du groupe *" name="name" placeholder="Maths 9e — G1" defaultValue={g?.name} wrapperClass="@md:col-span-2" />
       <Select label="Niveau *" name="levelId" placeholder="Choisir…" defaultValue={g?.levelId} options={levels} />
       <Select label="Matière *" name="subjectId" placeholder="Choisir…" defaultValue={g?.subjectId} options={subjects.map((s) => ({ value: s.id, label: s.name }))} />
       <Select label="Enseignant" name="teacherId" placeholder="—" defaultValue={g?.teacherId ?? ""} options={teachers.map((t) => ({ value: t.id, label: `${t.lastName} ${t.firstName}` }))} />
@@ -21,6 +21,6 @@ export async function GroupFields({ g }: { g?: Group }) {
       <Input label="Capacité *" name="capacity" type="number" min={1} defaultValue={g?.capacity ?? 12} />
       <Input label="Mensualité (DT)" name="monthlyFee" inputMode="decimal" placeholder="selon la grille" defaultValue={g ? moneyInput(g.monthlyFee) : ""} hint={g ? undefined : "Vide : tarif de la grille tarifaire"} />
       <Input label="Frais d'inscription (DT)" name="registrationFee" inputMode="decimal" placeholder="selon la grille" defaultValue={g ? moneyInput(g.registrationFee) : ""} />
-    </div>
+    </div></div>
   );
 }

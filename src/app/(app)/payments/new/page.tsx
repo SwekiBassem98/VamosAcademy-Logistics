@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, PageHeader, Forbidden, Table, Td } from "@/components/ui";
+import { Card, PageHeader, Forbidden, Table, Td, ApplyButton, LinkButton, EmptyState } from "@/components/ui";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { studentInvoices } from "@/server/services/finance";
@@ -22,19 +22,20 @@ export default async function NewPayment({ searchParams }: { searchParams: Promi
       : [];
     return (
       <>
-        <PageHeader title="Encaisser un paiement" subtitle="Recherchez l'élève concerné." />
-        <form className="mb-4 flex gap-2">
-          <input name="q" defaultValue={q} autoFocus placeholder="Nom, matricule ou téléphone du parent" className="input max-w-md" aria-label="Rechercher un élève" />
-          <button className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white">Rechercher</button>
+        <PageHeader back={{ href: "/payments", label: "Paiements" }} title="Encaisser un paiement" subtitle="Étape 1 sur 2 — recherchez l'élève concerné." />
+        <form className="mb-4 flex max-w-xl gap-2" role="search">
+          <input name="q" type="search" enterKeyHint="search" defaultValue={q} autoFocus placeholder="Nom, matricule ou téléphone du parent" className="input" aria-label="Rechercher un élève" />
+          <ApplyButton>Rechercher</ApplyButton>
         </form>
+        {!q && <EmptyState title="Qui paie aujourd'hui ?" text="Saisissez le nom de l'élève, son matricule (VA-…) ou le téléphone d'un parent." />}
         {q && (
-          <Table head={["Matricule", "Élève", "Niveau", ""]} empty={results.length === 0}>
+          <Table head={["Élève", "Matricule", "Niveau", ""]} empty={results.length === 0} emptyText="Aucun élève trouvé. Vérifiez l'orthographe ou cherchez par téléphone.">
             {results.map((s) => (
               <tr key={s.id}>
+                <Td cell="primary" className="font-semibold text-navy">{s.lastName} {s.firstName}</Td>
                 <Td className="font-mono text-xs">{s.code}</Td>
-                <Td className="font-medium">{s.lastName} {s.firstName}</Td>
                 <Td>{s.level?.name ?? "—"}</Td>
-                <Td><Link href={`/payments/new?student=${s.id}`} className="text-brand">Sélectionner →</Link></Td>
+                <Td cell="actions" className="lg:text-right"><LinkButton size="sm" href={`/payments/new?student=${s.id}`} aria-label={`Sélectionner ${s.lastName} ${s.firstName}`}>Sélectionner</LinkButton></Td>
               </tr>
             ))}
           </Table>
@@ -48,8 +49,9 @@ export default async function NewPayment({ searchParams }: { searchParams: Promi
   const invoices = (await studentInvoices(studentId, year?.id)).filter((i) => i.remaining > 0);
   return (
     <>
-      <PageHeader title="Encaisser un paiement" subtitle={<>Élève : <Link className="text-brand" href={`/students/${student.id}`}>{student.lastName} {student.firstName}</Link> ({student.code})</>} />
-      <Card>
+      <PageHeader back={{ href: "/payments/new", label: "Changer d'élève" }} title="Encaisser un paiement"
+        subtitle={<>Étape 2 sur 2 · Élève : <Link className="font-semibold text-brand" href={`/students/${student.id}`}>{student.lastName} {student.firstName}</Link> ({student.code})</>} />
+      <Card className="max-w-3xl">
         {invoices.length === 0 ? (
           <p className="text-sm text-muted">Aucune échéance à régler pour cet élève sur l&apos;année {year?.label}. Vérifiez ses inscriptions.</p>
         ) : (
@@ -66,7 +68,7 @@ export default async function NewPayment({ searchParams }: { searchParams: Promi
             }))}
           />
         )}
-        <p className="mt-4 text-xs text-muted">Total restant sur l&apos;année : {formatMoney(invoices.reduce((s, i) => s + i.remaining, 0))}</p>
+        <p className="mt-4 text-sm text-muted">Total restant sur l&apos;année : {formatMoney(invoices.reduce((s, i) => s + i.remaining, 0))}</p>
       </Card>
     </>
   );

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Paperclip } from "lucide-react";
-import { Card, PageHeader, Table, Td, Forbidden, Stat, LinkButton, DemoBadge, Badge } from "@/components/ui";
-import { Form, Input, Select, Submit } from "@/components/form";
-import { FilterBar, Pagination, href, listParams, SortLink, type Params } from "@/components/table-tools";
+import { Plus } from "lucide-react";
+import { PageHeader, Table, Td, Forbidden, Stat, LinkButton, DemoBadge, Badge } from "@/components/ui";
+import { Form, FormActions, Input, Select, Submit } from "@/components/form";
+import { Sheet } from "@/components/sheet";
+import { FilterBar, FilterField, Pagination, href, listParams, SortLink, type Params } from "@/components/table-tools";
 import { PersistFilters } from "@/components/persist-filters";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
@@ -41,40 +43,8 @@ export default async function Expenses({ searchParams }: { searchParams: Promise
     <>
       <PersistFilters storageKey="expenses" />
       <PageHeader title="Dépenses" subtitle={`Du ${formatDate(parseDay(from))} au ${formatDate(parseDay(to))} · les dépenses annulées restent visibles mais ne sont pas comptées`}
-        actions={<>
-          <LinkButton variant="secondary" prefetch={false} href={`/api/export/expenses${qs}`}>CSV</LinkButton>
-          <LinkButton variant="secondary" prefetch={false} href={`/api/export/expenses${qs}${qs ? "&" : "?"}format=xlsx`}>Excel</LinkButton>
-        </>} />
-      <FilterBar params={params}>
-        <label className="text-sm">Du <input type="date" name="from" defaultValue={from} className="input w-40" /></label>
-        <label className="text-sm">Au <input type="date" name="to" defaultValue={to} className="input w-40" /></label>
-        <input name="q" defaultValue={params.q ?? ""} placeholder="Libellé, référence…" className="input w-full sm:w-48" aria-label="Rechercher" />
-        <select name="category" defaultValue={params.category ?? ""} className="input w-full sm:w-48" aria-label="Catégorie"><option value="">Toutes catégories</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-        <select name="mode" defaultValue={params.mode ?? ""} className="input w-full sm:w-40" aria-label="Moyen"><option value="">Tous moyens</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select>
-        <select name="state" defaultValue={params.state ?? ""} className="input w-full sm:w-44" aria-label="État"><option value="">Toutes</option><option value="valid">Valides</option><option value="cancelled">Annulées / corrigées</option><option value="nodoc">Sans justificatif</option></select>
-      </FilterBar>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <Stat label="Total de la période" tone="brand" value={formatMoney(sum._sum.amount ?? 0)} hint={`${sum._count._all} dépense(s) valide(s)`} />
-        <Stat label="Premier poste" value={topCat ? categories.find((c) => c.id === topCat.categoryId)?.name ?? "—" : "—"} hint={topCat ? formatMoney(topCat._sum.amount ?? 0) : undefined} />
-        <Stat label="Sans justificatif" value={missing} hint={missing ? "À compléter" : "Tout est justifié"} />
-      </div>
-      <Table head={[<SortLink key="d" base={base} params={params} field="spentAt" label="Date" />, "Catégorie", "Libellé", "Moyen", <SortLink key="a" base={base} params={params} field="amount" label="Montant" />, "Justif.", "État"]} empty={expenses.length === 0}>
-        {expenses.map((e) => (
-          <tr key={e.id} className={e.cancelledAt ? "text-muted" : "hover:bg-gray-50"}>
-            <Td>{formatDate(e.spentAt)}</Td>
-            <Td>{e.category.name}</Td>
-            <Td className="whitespace-normal"><Link href={`/expenses/${e.id}`} className="font-medium hover:text-brand">{e.label}</Link>{e.isDemo && <DemoBadge />}</Td>
-            <Td>{e.mode.label}{e.reference && <span className="block text-xs text-muted">{e.reference}</span>}</Td>
-            <Td className={e.cancelledAt ? "tabular-nums line-through" : "font-semibold tabular-nums"}>{formatMoney(e.amount)}</Td>
-            <Td>{e._count.attachments ? <span className="inline-flex items-center gap-1 text-emerald-700"><Paperclip className="size-3.5" />{e._count.attachments}</span> : e.teacherPayId ? <span className="text-xs text-muted">paie</span> : <Badge tone="amber">manquant</Badge>}</Td>
-            <Td>{e.correctedBy ? <Badge tone="amber">corrigée</Badge> : e.cancelledAt ? <Badge tone="red">annulée</Badge> : e.correctsId ? <Badge tone="blue">correction</Badge> : <Badge tone="green">valide</Badge>}</Td>
-          </tr>
-        ))}
-      </Table>
-      <Pagination base={base} params={params} page={page} total={total} perPage={PER} />
-      {write && (
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          <Card title="Nouvelle dépense" className="lg:col-span-2">
+        primary={write && (
+          <Sheet trigger={<><Plus /> Nouvelle dépense</>} title="Nouvelle dépense" description="Joignez le justificatif dès la saisie si possible.">
             <Form action={createExpense} className="grid gap-4 sm:grid-cols-2" resetOnSuccess>
               <Select label="Catégorie *" name="categoryId" placeholder="Choisir…" options={categories.map((c) => ({ value: c.id, label: c.name }))} />
               <Input label="Libellé *" name="label" />
@@ -83,18 +53,49 @@ export default async function Expenses({ searchParams }: { searchParams: Promise
               <Input label="Référence (n° chèque, facture…)" name="reference" />
               <Input label="Date *" name="spentAt" type="date" defaultValue={todayISO()} max={todayISO()} />
               <Input label="Justificatifs (PDF, JPG, PNG — 5 Mo max.)" name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="sm:col-span-2" />
-              <div className="sm:col-span-2"><Submit>Enregistrer la dépense</Submit></div>
+              <FormActions><Submit>Enregistrer la dépense</Submit></FormActions>
             </Form>
-          </Card>
-          <Card title="Catégories">
-            <p className="mb-3 text-sm text-muted">{categories.map((c) => c.name).join(" · ")}</p>
-            <Form action={createCategory} className="flex items-end gap-2" resetOnSuccess>
-              <Input label="Nouvelle catégorie" name="name" wrapperClass="flex-1" />
-              <Submit variant="secondary">Ajouter</Submit>
-            </Form>
-          </Card>
-        </div>
-      )}
+            <div className="mt-8 border-t border-line pt-5">
+              <h3 className="text-sm font-bold text-navy">Catégories</h3>
+              <p className="mt-1 mb-3 text-sm text-muted">{categories.map((c) => c.name).join(" · ")}</p>
+              <Form action={createCategory} className="flex items-end gap-2" resetOnSuccess>
+                <Input label="Nouvelle catégorie" name="name" wrapperClass="flex-1" />
+                <Submit variant="secondary">Ajouter</Submit>
+              </Form>
+            </div>
+          </Sheet>
+        )}
+        actions={<>
+          <LinkButton variant="secondary" prefetch={false} href={`/api/export/expenses${qs}`}>Exporter CSV</LinkButton>
+          <LinkButton variant="secondary" prefetch={false} href={`/api/export/expenses${qs}${qs ? "&" : "?"}format=xlsx`}>Excel</LinkButton>
+        </>} />
+      <FilterBar params={params}
+        search={<input name="q" type="search" defaultValue={params.q ?? ""} placeholder="Libellé, référence…" className="input" aria-label="Rechercher une dépense" />}>
+        <FilterField label="Du"><input type="date" name="from" defaultValue={from} className="input md:w-40" /></FilterField>
+        <FilterField label="Au"><input type="date" name="to" defaultValue={to} className="input md:w-40" /></FilterField>
+        <select name="category" defaultValue={params.category ?? ""} className="input md:w-48" aria-label="Catégorie"><option value="">Toutes catégories</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <select name="mode" defaultValue={params.mode ?? ""} className="input md:w-40" aria-label="Moyen"><option value="">Tous moyens</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select>
+        <select name="state" defaultValue={params.state ?? ""} className="input md:w-44" aria-label="État"><option value="">Toutes</option><option value="valid">Valides</option><option value="cancelled">Annulées / corrigées</option><option value="nodoc">Sans justificatif</option></select>
+      </FilterBar>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="col-span-2 sm:col-span-1"><Stat label="Total de la période" tone="brand" value={formatMoney(sum._sum.amount ?? 0)} hint={`${sum._count._all} dépense(s) valide(s)`} /></div>
+        <Stat label="Premier poste" value={topCat ? categories.find((c) => c.id === topCat.categoryId)?.name ?? "—" : "—"} hint={topCat ? formatMoney(topCat._sum.amount ?? 0) : undefined} />
+        <Stat label="Sans justificatif" value={missing} hint={missing ? "À compléter" : "Tout est justifié"} href={missing ? "/expenses?state=nodoc" : undefined} />
+      </div>
+      <Table head={[<SortLink key="d" base={base} params={params} field="spentAt" label="Date" />, "Catégorie", "Libellé", "Moyen", <SortLink key="a" base={base} params={params} field="amount" label="Montant" />, "Justif.", "État"]} empty={expenses.length === 0} emptyText="Aucune dépense sur cette période." caption="Dépenses">
+        {expenses.map((e) => (
+          <tr key={e.id} className={e.cancelledAt ? "text-muted" : "transition hover:bg-surface"}>
+            <Td>{formatDate(e.spentAt)}</Td>
+            <Td>{e.category.name}</Td>
+            <Td cell="primary" className="lg:whitespace-normal"><Link href={`/expenses/${e.id}`} className="font-semibold text-navy hover:text-brand">{e.label}</Link>{e.isDemo && <DemoBadge />}</Td>
+            <Td>{e.mode.label}{e.reference && <span className="block text-xs text-muted">{e.reference}</span>}</Td>
+            <Td cell="num" className={e.cancelledAt ? "line-through" : "font-bold text-navy"}>{formatMoney(e.amount)}</Td>
+            <Td>{e._count.attachments ? <span className="inline-flex items-center gap-1 text-success-600"><Paperclip className="size-3.5" />{e._count.attachments}</span> : e.teacherPayId ? <span className="text-xs text-muted">paie</span> : <Badge tone="amber">manquant</Badge>}</Td>
+            <Td>{e.correctedBy ? <Badge tone="amber">corrigée</Badge> : e.cancelledAt ? <Badge tone="red">annulée</Badge> : e.correctsId ? <Badge tone="blue">correction</Badge> : <Badge tone="green">valide</Badge>}</Td>
+          </tr>
+        ))}
+      </Table>
+      <Pagination base={base} params={params} page={page} total={total} perPage={PER} />
     </>
   );
 }

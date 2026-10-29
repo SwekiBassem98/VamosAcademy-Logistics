@@ -6,7 +6,7 @@ import { formatDateTime } from "@/lib/format";
 export async function DocHeader({ title, reference, lines = [] }: { title: string; reference?: string; lines?: string[] }) {
   const c = await db.centerSettings.findUnique({ where: { id: 1 } });
   return (
-    <header className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
+    <header className="flex flex-col gap-4 border-b-2 border-brand pb-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:items-start print:justify-between">
       <div>
         <Image src="/brand/logo.png" alt="VAMOS ACADEMY" width={140} height={74} />
         <p className="mt-2 text-xs text-muted">
@@ -14,8 +14,8 @@ export async function DocHeader({ title, reference, lines = [] }: { title: strin
           {c?.addressFr}<br /><span dir="rtl" lang="ar">{c?.addressAr}</span><br />Tél. {c?.phone}{c?.email && ` · ${c.email}`}
         </p>
       </div>
-      <div className="text-right">
-        <p className="text-lg font-bold uppercase text-navy">{title}</p>
+      <div className="sm:text-right print:text-right">
+        <p className="font-display text-lg font-extrabold uppercase text-navy">{title}</p>
         {reference && <p className="mt-1 inline-block rounded border-2 border-navy px-2 py-0.5 font-mono text-sm font-bold text-navy">{reference}</p>}
         {lines.map((l) => <p key={l} className="text-sm text-muted">{l}</p>)}
       </div>
@@ -37,8 +37,8 @@ export async function DocFooter({ demo = false }: { demo?: boolean }) {
 /** Cadre de document imprimable standard. */
 export function DocPage({ children, wide = false }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <article className={`mx-auto rounded-lg border border-line bg-white p-8 text-sm print:max-w-none print:border-0 print:p-0 ${wide ? "max-w-5xl" : "max-w-3xl"}`}>
-      {children}
+    <article className={`mx-auto rounded-lg border border-line bg-white p-4 text-sm shadow-xs sm:p-8 print:max-w-none print:border-0 print:p-0 print:shadow-none [&_table]:min-w-max sm:[&_table]:min-w-0 print:[&_table]:min-w-0 ${wide ? "max-w-5xl" : "max-w-3xl"}`}>
+      <div className="overflow-x-auto overscroll-x-contain print:overflow-visible">{children}</div>
     </article>
   );
 }

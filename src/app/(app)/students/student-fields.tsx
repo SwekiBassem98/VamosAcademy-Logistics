@@ -5,10 +5,14 @@ import { dayInput } from "@/lib/format";
 export const STATUS_LABEL = { PREINSCRIT: "Pré-inscrit", ACTIF: "Actif", SUSPENDU: "Suspendu", ARCHIVE: "Archivé" } as const;
 export const STATUS_TONE = { PREINSCRIT: "blue", ACTIF: "green", SUSPENDU: "amber", ARCHIVE: "gray" } as const;
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, step, hint, children }: { title: string; step?: number; hint?: string; children: React.ReactNode }) {
   return (
-    <fieldset className="space-y-4">
-      <legend className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand">{title}</legend>
+    <fieldset className="min-w-0 space-y-4">
+      <legend className="mb-1 flex items-center gap-2 text-sm font-bold text-navy">
+        {step && <span aria-hidden className="grid size-6 place-items-center rounded-full bg-brand text-xs font-bold text-white">{step}</span>}
+        {title}
+      </legend>
+      {hint && <p className="-mt-2 text-xs text-muted">{hint}</p>}
       {children}
     </fieldset>
   );
@@ -16,12 +20,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function StudentFields({ s, levels }: { s?: Student; levels: { value: string; label: string }[] }) {
   return (
-    <div className="space-y-6">
-      <Section title="Identité">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-7 @container">
+      <Section title="Identité" step={1}>
+        <div className="grid gap-4 @md:grid-cols-2 @3xl:grid-cols-3">
           <Input label="Nom *" name="lastName" defaultValue={s?.lastName} required autoComplete="off" />
           <Input label="Prénom *" name="firstName" defaultValue={s?.firstName} required autoComplete="off" />
-          <Input label="Nom complet en arabe" name="fullNameAr" dir="rtl" lang="ar" defaultValue={s?.fullNameAr ?? ""} />
+          <Input label="Nom complet en arabe" name="fullNameAr" dir="rtl" lang="ar" autoComplete="off" defaultValue={s?.fullNameAr ?? ""} />
           <Input label="Date de naissance" name="birthDate" type="date" defaultValue={dayInput(s?.birthDate)} />
           <Select label="Sexe" name="gender" placeholder="—" defaultValue={s?.gender ?? ""} options={[{ value: "M", label: "Garçon" }, { value: "F", label: "Fille" }]} />
           {s?.status === "ARCHIVE" ? <input type="hidden" name="status" value="ARCHIVE" /> : (
@@ -30,19 +34,19 @@ export function StudentFields({ s, levels }: { s?: Student; levels: { value: str
           )}
         </div>
       </Section>
-      <Section title="Scolarité">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Section title="Scolarité" step={2}>
+        <div className="grid gap-4 @md:grid-cols-2 @3xl:grid-cols-3">
           <Select label="Niveau scolaire" name="levelId" placeholder="—" defaultValue={s?.levelId ?? ""} options={levels} />
           <Input label="Classe à l'école" name="className" placeholder="ex. 9e B" defaultValue={s?.className ?? ""} />
           <Input label="Établissement fréquenté" name="school" defaultValue={s?.school ?? ""} />
         </div>
       </Section>
-      <Section title="Coordonnées">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Input label="Téléphone de l'élève" name="phone" inputMode="tel" placeholder="20 807 657" defaultValue={s?.phone ?? ""} />
-          <Input label="Adresse" name="address" wrapperClass="lg:col-span-2" defaultValue={s?.address ?? ""} />
+      <Section title="Coordonnées et remarques" step={3} hint="Facultatif : peut être complété plus tard depuis le dossier.">
+        <div className="grid gap-4 @md:grid-cols-2 @3xl:grid-cols-3">
+          <Input label="Téléphone de l'élève" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="20 807 657" defaultValue={s?.phone ?? ""} />
+          <Input label="Adresse" name="address" wrapperClass="@3xl:col-span-2" defaultValue={s?.address ?? ""} />
           <Textarea label="Remarques médicales / allergies" name="medicalNotes" defaultValue={s?.medicalNotes ?? ""} />
-          <Textarea label="Remarques" name="notes" wrapperClass="lg:col-span-2" defaultValue={s?.notes ?? ""} />
+          <Textarea label="Remarques" name="notes" wrapperClass="@3xl:col-span-2" defaultValue={s?.notes ?? ""} />
         </div>
       </Section>
     </div>

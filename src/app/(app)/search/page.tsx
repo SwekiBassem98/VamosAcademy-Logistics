@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, PageHeader, Badge, EmptyState } from "@/components/ui";
+import { Card, PageHeader, Badge, EmptyState, ApplyButton } from "@/components/ui";
 import { requireUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { groupScope, studentScope } from "@/server/scope";
@@ -10,8 +10,14 @@ export const metadata = { title: "Recherche" };
 export default async function Search({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const user = await requireUser();
   const q = ((await searchParams).q ?? "").trim();
+  const form = (
+    <form action="/search" role="search" className="mb-5 flex max-w-xl gap-2">
+      <input name="q" type="search" enterKeyHint="search" defaultValue={q} placeholder="Élève, parent, téléphone, matricule, groupe…" aria-label="Recherche globale" className="input" />
+      <ApplyButton>Rechercher</ApplyButton>
+    </form>
+  );
   if (q.length < 2) {
-    return <><PageHeader title="Recherche" /><EmptyState title="Saisissez au moins 2 caractères" text="Nom, prénom, matricule, téléphone d'un parent, enseignant ou groupe." /></>;
+    return <><PageHeader title="Recherche" />{form}<EmptyState title="Saisissez au moins 2 caractères" text="Nom, prénom, matricule, téléphone d'un parent, enseignant ou groupe." /></>;
   }
   const ci = { contains: q, mode: "insensitive" as const };
   const [students, guardians, teachers, groups] = await Promise.all([
@@ -32,13 +38,14 @@ export default async function Search({ searchParams }: { searchParams: Promise<{
   return (
     <>
       <PageHeader title={`Résultats pour « ${q} »`} subtitle={`${total} résultat(s)`} />
+      {form}
       {total === 0 && <EmptyState title="Aucun résultat" text="Vérifiez l'orthographe ou cherchez par téléphone ou matricule." />}
       <div className="grid gap-6 lg:grid-cols-2">
         {students.length > 0 && (
           <Card title={`Élèves (${students.length})`}>
             <ul className="divide-y divide-line text-sm">
               {students.map((s) => (
-                <li key={s.id} className="flex items-center justify-between py-2">
+                <li key={s.id} className="flex min-h-11 flex-wrap items-center justify-between gap-x-3 py-2">
                   <Link href={`/students/${s.id}`} className="font-medium text-navy hover:text-brand">{s.lastName} {s.firstName}</Link>
                   <span className="flex items-center gap-2 text-xs text-muted">{s.level?.name}<span className="font-mono">{s.code}</span>{s.status === "ARCHIVE" && <Badge>archivé</Badge>}</span>
                 </li>

@@ -20,13 +20,13 @@ export default async function PaySlip({ params }: { params: Promise<{ id: string
   const d = (p.details ?? {}) as Details;
   return (
     <>
-      <div className="no-print mx-auto mb-4 flex max-w-3xl justify-between">
-        <Link href={`/payroll?period=${p.period}`} className="text-sm text-muted hover:text-brand">← Rémunérations</Link>
+      <div className="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
+        <Link href={`/payroll?period=${p.period}`} className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Rémunérations</Link>
         <PrintButton />
       </div>
       <DocPage>
         <DocHeader title="Fiche de rémunération" reference={p.period} lines={[`${p.teacher.lastName} ${p.teacher.firstName}`, PAY_STATUS_LABEL[p.status]]} />
-        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-1.5">
+        <dl className="mt-4 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
           <div className="flex gap-2"><dt className="w-36 text-muted">Modalité</dt><dd>{PAY_MODE_LABEL[p.payMode]}</dd></div>
           <div className="flex gap-2"><dt className="w-36 text-muted">Taux</dt><dd>{p.payMode === "POURCENTAGE" ? `${p.rate} %` : formatMoney(p.rate)}{p.payMode === "HORAIRE" ? " / heure" : p.payMode === "PAR_SEANCE" ? " / séance" : ""}</dd></div>
           <div className="flex gap-2"><dt className="w-36 text-muted">Séances tenues</dt><dd>{d.sessions?.length ?? 0} ({((d.minutes ?? 0) / 60).toLocaleString("fr-FR", { maximumFractionDigits: 2 })} h)</dd></div>
@@ -50,7 +50,7 @@ export default async function PaySlip({ params }: { params: Promise<{ id: string
             </table>
           </>
         )}
-        <div className="mt-10 grid grid-cols-2 gap-10 text-center text-xs">
+        <div className="mt-10 grid grid-cols-2 gap-4 text-center text-xs sm:gap-10">
           <p className="h-16 border-t border-dashed border-gray-400 pt-1">Signature de l&apos;enseignant</p>
           <p className="h-16 border-t border-dashed border-gray-400 pt-1">Cachet de VAMOS ACADEMY</p>
         </div>

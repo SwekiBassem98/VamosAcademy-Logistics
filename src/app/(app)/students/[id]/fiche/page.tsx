@@ -36,16 +36,16 @@ export default async function Fiche({ params }: { params: Promise<{ id: string }
   return (
     <div className="mx-auto max-w-3xl">
       <div className="no-print mb-4 flex items-center justify-between">
-        <Link href={`/students/${s.id}`} className="text-sm text-muted hover:text-brand">← Retour au dossier</Link>
+        <Link href={`/students/${s.id}`} className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Retour au dossier</Link>
         <PrintButton />
       </div>
-      <article className="rounded-lg border border-line bg-white p-8 text-sm print:border-0 print:p-0">
-        <header className="flex items-start justify-between gap-4 border-b-2 border-brand pb-4">
+      <article className="rounded-lg border border-line bg-white p-4 text-sm shadow-xs sm:p-8 print:border-0 print:p-0 print:shadow-none">
+        <header className="flex flex-col gap-4 border-b-2 border-brand pb-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:justify-between">
           <div>
             <Image src="/brand/logo.png" alt="VAMOS ACADEMY" width={150} height={79} />
             <p className="mt-2 text-xs text-muted">{center?.addressFr}<br /><span dir="rtl">{center?.addressAr}</span><br />Tél. {center?.phone}</p>
           </div>
-          <div className="text-right">
+          <div className="sm:text-right print:text-right">
             <h1 className="text-xl font-bold text-navy">FICHE D&apos;INSCRIPTION</h1>
             <p className="text-sm">Année scolaire <strong>{year?.label ?? "—"}</strong></p>
             <p className="mt-2 inline-block rounded border-2 border-navy px-3 py-1 font-mono text-base font-bold text-navy">{s.code}</p>
@@ -53,7 +53,7 @@ export default async function Fiche({ params }: { params: Promise<{ id: string }
         </header>
 
         <h2 className="mt-5 mb-2 bg-navy px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">Élève</h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+        <dl className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
           <Row k="Nom et prénom" v={`${s.lastName} ${s.firstName}`} />
           <Row k="Nom en arabe" v={s.fullNameAr} rtl />
           <Row k="Date de naissance" v={formatDate(s.birthDate)} />
@@ -67,17 +67,17 @@ export default async function Fiche({ params }: { params: Promise<{ id: string }
 
         <h2 className="mt-5 mb-2 bg-navy px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">Parents / contacts</h2>
         {s.guardians.length === 0 ? <p className="text-muted">Aucun contact enregistré.</p> : (
-          <table className="w-full">
+          <div className="overflow-x-auto"><table className="w-full min-w-[32rem] sm:min-w-0 print:min-w-0">
             <thead><tr className="border-b border-line text-left text-xs text-muted"><th className="py-1">Lien</th><th>Nom</th><th>Téléphone</th><th>Profession</th><th>Paiements</th></tr></thead>
             <tbody>{s.guardians.map(({ guardian: g, relation, isPayer }) => (
               <tr key={g.id} className="border-b border-line/60"><td className="py-1">{relation}</td><td>{g.lastName} {g.firstName}</td><td>{g.phone}{g.phone2 && ` / ${g.phone2}`}</td><td>{g.profession ?? ""}</td><td>{isPayer ? "Oui" : ""}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         )}
 
         <h2 className="mt-5 mb-2 bg-navy px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">Cours suivis</h2>
         {s.enrollments.length === 0 ? <p className="text-muted">Aucune inscription en cours pour cette année.</p> : (
-          <table className="w-full">
+          <div className="overflow-x-auto"><table className="w-full min-w-[32rem] sm:min-w-0 print:min-w-0">
             <thead><tr className="border-b border-line text-left text-xs text-muted"><th className="py-1">Matière / groupe</th><th>Horaires</th><th>Depuis</th><th className="text-right">Mensualité</th></tr></thead>
             <tbody>
               {s.enrollments.map((e) => (
@@ -93,15 +93,15 @@ export default async function Fiche({ params }: { params: Promise<{ id: string }
               <tr><td colSpan={3} className="pt-2 text-right font-semibold">Total mensuel</td><td className="pt-2 text-right font-bold text-brand tabular-nums">{formatMoney(totalMonthly)}</td></tr>
               {regFees > 0 && <tr><td colSpan={3} className="text-right text-xs text-muted">Frais d&apos;inscription (une fois)</td><td className="text-right text-xs tabular-nums">{formatMoney(regFees)}</td></tr>}
             </tfoot>
-          </table>
+          </table></div>
         )}
 
         <h2 className="mt-5 mb-2 bg-navy px-2 py-1 text-xs font-bold uppercase tracking-wide text-white">Engagement</h2>
-        <p className="text-xs leading-relaxed text-gray-700">
+        <p className="text-xs leading-relaxed text-ink-soft">
           Les mensualités sont payables avant le {year?.dueDay ?? 10} de chaque mois. Toute absence doit être signalée au centre.
           Le parent / tuteur certifie l&apos;exactitude des informations ci-dessus et autorise le centre à le contacter en cas d&apos;urgence.
         </p>
-        <div className="mt-8 grid grid-cols-2 gap-10 text-center text-xs">
+        <div className="mt-8 grid grid-cols-2 gap-4 text-center text-xs sm:gap-10">
           <p className="h-20 border-t border-dashed border-gray-400 pt-1">Signature du parent / tuteur</p>
           <p className="h-20 border-t border-dashed border-gray-400 pt-1">Cachet & signature de VAMOS ACADEMY</p>
         </div>
@@ -114,8 +114,8 @@ export default async function Fiche({ params }: { params: Promise<{ id: string }
 function Row({ k, v, rtl }: { k: string; v: string | null | undefined; rtl?: boolean }) {
   return (
     <div className="flex gap-2 border-b border-dotted border-gray-300 py-0.5">
-      <dt className="w-40 shrink-0 text-xs text-muted">{k}</dt>
-      <dd className="font-medium" dir={rtl ? "rtl" : undefined}>{v || "—"}</dd>
+      <dt className="w-32 shrink-0 text-xs text-muted sm:w-40">{k}</dt>
+      <dd className="min-w-0 break-words font-medium" dir={rtl ? "rtl" : undefined}>{v || "—"}</dd>
     </div>
   );
 }

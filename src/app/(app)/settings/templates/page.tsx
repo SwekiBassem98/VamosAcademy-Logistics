@@ -34,7 +34,7 @@ export default async function Templates() {
         </div>
         <div className="space-y-4">
           <Card title="Variables disponibles">
-            <ul className="space-y-1 text-sm">{Object.entries(TEMPLATE_VARIABLES).map(([k, v]) => <li key={k}><code className="rounded bg-gray-100 px-1 text-xs">{`{${k}}`}</code> {v}</li>)}</ul>
+            <ul className="space-y-1 text-sm">{Object.entries(TEMPLATE_VARIABLES).map(([k, v]) => <li key={k}><code className="rounded bg-surface-2 px-1 text-xs">{`{${k}}`}</code> {v}</li>)}</ul>
             <p className="mt-3 text-xs text-muted">Une variable sans valeur apparaît entre crochets dans le message préparé pour être corrigée avant l&apos;envoi.</p>
           </Card>
           <Card title="Canaux d'envoi">

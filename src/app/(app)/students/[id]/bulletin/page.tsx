@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Forbidden } from "@/components/ui";
+import { buttonClass, Forbidden } from "@/components/ui";
 import { PrintButton } from "@/components/print-button";
 import { DocHeader, DocFooter, DocPage } from "@/components/document";
 import { pageUser } from "@/server/auth";
@@ -44,15 +44,15 @@ export default async function Bulletin({ params, searchParams }: { params: Promi
   return (
     <>
       <div className="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
-        <Link href={`/students/${s.id}`} className="text-sm text-muted hover:text-brand">← Dossier de l&apos;élève</Link>
-        <div className="flex gap-2">
-          <form className="flex gap-1"><select name="term" defaultValue={term ? String(term) : ""} className="input w-40 py-1.5" aria-label="Trimestre"><option value="">Toute l&apos;année</option><option value="1">Trimestre 1</option><option value="2">Trimestre 2</option><option value="3">Trimestre 3</option></select><button className="rounded bg-navy px-3 text-sm text-white">OK</button></form>
+        <Link href={`/students/${s.id}`} className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Dossier de l&apos;élève</Link>
+        <div className="flex flex-wrap gap-2">
+          <form className="flex gap-1"><select name="term" defaultValue={term ? String(term) : ""} className="input w-40" aria-label="Trimestre"><option value="">Toute l&apos;année</option><option value="1">Trimestre 1</option><option value="2">Trimestre 2</option><option value="3">Trimestre 3</option></select><button className={buttonClass({ variant: "navy" })}>OK</button></form>
           <PrintButton />
         </div>
       </div>
       <DocPage>
         <DocHeader title="Bulletin de suivi" reference={s.code} lines={[term ? `Trimestre ${term}` : "Année complète", `Année ${year?.label ?? "—"}`]} />
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 print:grid-cols-2">
           <p><span className="text-muted">Élève :</span> <strong>{s.lastName} {s.firstName}</strong></p>
           <p><span className="text-muted">Niveau :</span> {s.level ? `${s.level.cycle.name} — ${s.level.name}` : "—"}</p>
         </div>
@@ -72,7 +72,7 @@ export default async function Bulletin({ params, searchParams }: { params: Promi
           <tfoot><tr><td colSpan={2} className="pt-3 text-right font-semibold">Moyenne générale (matières notées)</td><td className="pt-3 text-right text-lg font-bold text-brand tabular-nums">{formatScore(general)}</td><td /></tr></tfoot>
         </table>
         <p className="mt-4 text-sm">Assiduité : {s.attendance.length} séance(s) pointée(s) — {abs} absence(s) non justifiée(s), {exc} excusée(s), {late} retard(s).</p>
-        <div className="mt-8 grid grid-cols-2 gap-10 text-center text-xs">
+        <div className="mt-8 grid grid-cols-2 gap-4 text-center text-xs sm:gap-10">
           <p className="h-16 border-t border-dashed border-gray-400 pt-1">Signature du parent</p>
           <p className="h-16 border-t border-dashed border-gray-400 pt-1">Cachet de VAMOS ACADEMY</p>
         </div>

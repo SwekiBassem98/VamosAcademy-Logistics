@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { Wallet } from "lucide-react";
 import { PageHeader, Table, Td, Badge, LinkButton, Forbidden, Stat } from "@/components/ui";
-import { FilterBar, Pagination, SortLink, listParams, href, type Params } from "@/components/table-tools";
+import { FilterBar, FilterField, Pagination, SortLink, listParams, href, type Params } from "@/components/table-tools";
 import { PersistFilters } from "@/components/persist-filters";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
@@ -36,33 +37,34 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     <>
       <PersistFilters storageKey="payments" />
       <PageHeader title="Paiements" subtitle={`Du ${formatDate(parseDay(from))} au ${formatDate(parseDay(to))}`}
+        primary={can(user.role, "payments.write") && <LinkButton href="/payments/new"><Wallet /> Encaisser</LinkButton>}
         actions={<>
-          <LinkButton variant="secondary" prefetch={false} href={`/api/export/payments${exportQs}`}>CSV</LinkButton>
+          <LinkButton variant="secondary" prefetch={false} href={`/api/export/payments${exportQs}`}>Exporter CSV</LinkButton>
           <LinkButton variant="secondary" prefetch={false} href={`/api/export/payments${exportQs}${exportQs ? "&" : "?"}format=xlsx`}>Excel</LinkButton>
-          {can(user.role, "payments.write") && <LinkButton href="/payments/new">Encaisser</LinkButton>}
         </>} />
-      <FilterBar params={params}>
-        <label className="text-sm">Du <input type="date" name="from" defaultValue={from} className="input w-40" /></label>
-        <label className="text-sm">Au <input type="date" name="to" defaultValue={to} className="input w-40" /></label>
-        <input name="q" defaultValue={params.q ?? ""} placeholder="Élève, n° de reçu, référence…" className="input w-full sm:w-52" aria-label="Rechercher" />
-        <select name="mode" defaultValue={params.mode ?? ""} className="input w-full sm:w-40" aria-label="Moyen de paiement"><option value="">Tous moyens</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select>
-        <select name="year" defaultValue={params.year ?? ""} className="input w-full sm:w-36" aria-label="Année scolaire"><option value="">Toutes années</option>{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select>
-        <select name="level" defaultValue={params.level ?? ""} className="input w-full sm:w-48" aria-label="Niveau"><option value="">Tous niveaux</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
-        <select name="group" defaultValue={params.group ?? ""} className="input w-full sm:w-44" aria-label="Groupe"><option value="">Tous groupes</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
-        <select name="state" defaultValue={params.state ?? ""} className="input w-full sm:w-32" aria-label="État"><option value="">Tous</option><option value="valid">Valides</option><option value="cancelled">Annulés</option></select>
+      <FilterBar params={params}
+        search={<input name="q" type="search" defaultValue={params.q ?? ""} placeholder="Élève, n° de reçu, référence…" className="input" aria-label="Rechercher un paiement" />}>
+        <FilterField label="Du"><input type="date" name="from" defaultValue={from} className="input md:w-40" /></FilterField>
+        <FilterField label="Au"><input type="date" name="to" defaultValue={to} className="input md:w-40" /></FilterField>
+        <select name="mode" defaultValue={params.mode ?? ""} className="input md:w-40" aria-label="Moyen de paiement"><option value="">Tous moyens</option>{modes.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select>
+        <select name="year" defaultValue={params.year ?? ""} className="input md:w-36" aria-label="Année scolaire"><option value="">Toutes années</option>{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select>
+        <select name="level" defaultValue={params.level ?? ""} className="input md:w-48" aria-label="Niveau"><option value="">Tous niveaux</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
+        <select name="group" defaultValue={params.group ?? ""} className="input md:w-44" aria-label="Groupe"><option value="">Tous groupes</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
+        <select name="state" defaultValue={params.state ?? ""} className="input md:w-32" aria-label="État"><option value="">Tous</option><option value="valid">Valides</option><option value="cancelled">Annulés</option></select>
       </FilterBar>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Total encaissé" tone="green" value={formatMoney(totalValid)} hint={`${count} reçu(s) valide(s)`} />
         {modes.filter((m) => sums.some((x) => x.modeId === m.id)).slice(0, 4).map((m) => <Stat key={m.id} label={m.label} value={formatMoney(sums.find((x) => x.modeId === m.id)?._sum.amount ?? 0)} />)}
       </div>
-      <Table head={[<SortLink key="r" base={base} params={params} field="receiptNo" label="Reçu" />, <SortLink key="d" base={base} params={params} field="paidAt" label="Date" />, "Élève", "Moyen", <SortLink key="a" base={base} params={params} field="amount" label="Montant" />, "État"]} empty={payments.length === 0}>
+      <Table head={[<SortLink key="r" base={base} params={params} field="receiptNo" label="Reçu" />, <SortLink key="d" base={base} params={params} field="paidAt" label="Date" />, "Élève", "Moyen", <SortLink key="a" base={base} params={params} field="amount" label="Montant" />, "État"]} empty={payments.length === 0} emptyText="Aucun paiement sur cette période." caption="Paiements">
         {payments.map((p) => (
-          <tr key={p.id} className={p.cancelledAt ? "text-muted" : "hover:bg-gray-50"}>
-            <Td className="font-mono text-xs"><Link href={`/payments/${p.id}`} className="hover:text-brand">{p.receiptNo}</Link></Td>
+          <tr key={p.id} className={p.cancelledAt ? "text-muted" : "transition hover:bg-surface"}>
+            <Td cell="hide-sm" className="font-mono text-xs"><Link href={`/payments/${p.id}`} className="hover:text-brand">{p.receiptNo}</Link></Td>
             <Td>{formatDate(p.paidAt)}</Td>
-            <Td><Link href={`/students/${p.studentId}`} className="hover:text-brand">{p.student.lastName} {p.student.firstName}</Link></Td>
+            <Td cell="primary"><Link href={`/students/${p.studentId}`} className="font-semibold text-navy hover:text-brand">{p.student.lastName} {p.student.firstName}</Link>
+              <Link href={`/payments/${p.id}`} className="block font-mono text-xs text-muted hover:text-brand lg:hidden">Reçu {p.receiptNo}</Link></Td>
             <Td>{p.mode.label}{p.reference && <span className="block text-xs text-muted">{p.reference}</span>}</Td>
-            <Td className={p.cancelledAt ? "tabular-nums line-through" : "font-semibold tabular-nums"}>{formatMoney(p.amount)}</Td>
+            <Td cell="num" className={p.cancelledAt ? "line-through" : "font-bold text-navy"}>{formatMoney(p.amount)}</Td>
             <Td>{p.correctedBy ? <Badge tone="amber">corrigé → {p.correctedBy.receiptNo}</Badge> : p.cancelledAt ? <Badge tone="red">annulé</Badge> : p.correctsId ? <Badge tone="blue">correction</Badge> : <Badge tone="green">valide</Badge>}</Td>
           </tr>
         ))}

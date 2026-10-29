@@ -20,10 +20,17 @@ n'y a pas accès.
 - La session se ferme après 12 h d'inactivité (7 jours au maximum). Pensez à vous déconnecter sur un poste partagé
   (menu en haut à droite → *Se déconnecter*).
 
-## 2. Tableau de bord et recherche
+## 2. Navigation, tableau de bord et recherche
 
-- Le tableau de bord présente l'effectif, les nouvelles inscriptions, les encaissements, les impayés, les dépenses, les cours du
-  jour, les absences récentes et les tâches à traiter.
+- **Sur ordinateur** : menu complet à gauche, recherche, cloche et compte en haut.
+- **Sur téléphone et tablette** : une barre d'onglets en bas donne accès d'un geste aux 4 écrans les plus utiles pour votre rôle
+  (par exemple *Accueil, Élèves, Appels, Caisse* pour l'administration, *Accueil, Appels, Notes, Agenda* pour un enseignant) ;
+  l'onglet **Menu** ouvre tous les modules autorisés, avec un champ de recherche. La loupe en haut ouvre la recherche plein écran.
+- Le tableau de bord commence par **Aujourd'hui** (séances du jour et appels à faire) et **À traiter** (notifications, absences à
+  justifier, messages, justificatifs, pré-inscriptions), puis les chiffres clés, les retards de paiement, les absences récentes,
+  les derniers paiements, les prochains cours, l'évolution mensuelle, l'occupation des salles et l'activité des enseignants.
+- Sur téléphone, les listes s'affichent en **fiches** (une carte par élève, paiement, dépense…) : rien ne dépasse de l'écran.
+  Les filtres se déplient avec le bouton *Filtres* ; la recherche reste toujours visible.
 - La **barre de recherche** (en haut) trouve un élève (nom, matricule, téléphone d'un parent), un parent, un enseignant ou un groupe.
 - La **cloche** affiche les nouvelles notifications ; *Notifications* permet de les marquer lues ou traitées (avec une note).
 
@@ -47,6 +54,9 @@ Astuce : cochez plusieurs élèves dans la liste pour les exporter, préparer un
 - Dans un groupe : ajouter les créneaux. L'application refuse une salle ou un enseignant déjà occupé, un créneau hors des
   disponibilités de l'enseignant ou une salle trop petite.
 - *Enseignants* : matières, niveaux, disponibilités et mode de rémunération.
+- **Emploi du temps sur téléphone** : un jour à la fois (onglets *Lun.* à *Sam.*, aujourd'hui sélectionné). Les créneaux en
+  conflit (même salle ou même enseignant au même moment) sont encadrés en rouge avec la raison ; ceux du jour indiquent si
+  l'appel est fait et le nombre d'absents.
 
 ## 5. Présences et notes
 
@@ -54,6 +64,10 @@ Astuce : cochez plusieurs élèves dans la liste pour les exporter, préparer un
   ou le justificatif ; une alerte « justificatif manquant » apparaît après 48 h sinon.
 - *Notes* : créer une évaluation (type, trimestre, coefficient, barème), cliquer dessus dans le relevé, saisir les notes et les
   appréciations. Les moyennes sur 20 sont calculées automatiquement.
+- **Appel sur téléphone** : *Appels* (onglet du bas) → touchez la séance du jour. Chaque élève a quatre gros boutons
+  (Présent, Absent, Retard, Excusé) ; *Tous présents* remet tout à « présent ». Le bouton d'enregistrement reste visible en bas
+  de l'écran. Les flèches *Veille / Lendemain* changent de jour.
+- Le relevé de notes reste un vrai tableau : sur téléphone, faites-le défiler horizontalement (la colonne des élèves reste fixe).
 
 ## 6. Paiements
 

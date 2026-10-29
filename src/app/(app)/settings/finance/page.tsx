@@ -1,4 +1,4 @@
-import { Card, PageHeader, Forbidden, Badge, Table, Td } from "@/components/ui";
+import { Card, PageHeader, Forbidden, Badge, Table, Td, ApplyButton } from "@/components/ui";
 import { Form, Input, Select, Submit, Checkbox } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { pageUser } from "@/server/auth";
@@ -31,21 +31,21 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
       <SettingsTabs active="finance" />
 
       <Card title={`Grille tarifaire — année ${year?.label ?? "—"}`} actions={
-        <form className="flex gap-1"><select name="year" defaultValue={year?.id} className="input w-32 py-1 text-xs" aria-label="Année">{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select><button className="rounded bg-navy px-2 text-xs text-white">OK</button></form>
+        <form className="flex gap-1.5"><select name="year" defaultValue={year?.id} className="input w-32" aria-label="Année">{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select><ApplyButton>OK</ApplyButton></form>
       }>
         <p className="mb-3 text-xs text-muted">
           Tarif proposé automatiquement à la création d&apos;un groupe quand la mensualité est laissée vide. La règle la plus précise l&apos;emporte :
           niveau + matière › niveau › cycle + matière › matière › cycle › tarif par défaut de l&apos;année. Modifier la grille ne change pas les groupes existants.
         </p>
-        <Table head={["Portée", "Mensualité", "Frais d'inscription", ""]} empty={sorted.length === 0}>
+        <Table head={["Portée", "Mensualité", "Frais d'inscription", ""]} empty={sorted.length === 0} emptyText="Aucun tarif dans la grille.">
           {sorted.map((r) => (
             <tr key={r.id}>
-              <Td className="whitespace-normal">
+              <Td cell="primary" className="font-semibold lg:whitespace-normal">
                 {[r.level ? `${r.level.cycle.name} — ${r.level.name}` : r.cycle?.name, r.subject?.name].filter(Boolean).join(" · ") || <em className="text-muted">Tarif par défaut de l&apos;année</em>}
               </Td>
-              <Td className="font-semibold tabular-nums">{formatMoney(r.monthlyFee)}</Td>
-              <Td className="tabular-nums">{formatMoney(r.registrationFee)}</Td>
-              <Td><ConfirmAction action={deleteFeeRule.bind(null, r.id)} small variant="secondary" label="Retirer" title="Retirer ce tarif de la grille ?" message="Les groupes déjà créés gardent leur tarif." /></Td>
+              <Td cell="num" className="font-semibold">{formatMoney(r.monthlyFee)}</Td>
+              <Td cell="num">{formatMoney(r.registrationFee)}</Td>
+              <Td cell="actions"><ConfirmAction action={deleteFeeRule.bind(null, r.id)} small variant="secondary" label="Retirer" title="Retirer ce tarif de la grille ?" message="Les groupes déjà créés gardent leur tarif." /></Td>
             </tr>
           ))}
         </Table>
@@ -67,11 +67,11 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
           <p className="mb-3 text-xs text-muted">Utilisés pour les encaissements, dépenses et rémunérations. Un moyen déjà utilisé ne peut pas être supprimé, seulement désactivé.</p>
           <ul className="space-y-2">
             {modes.map((m) => (
-              <li key={m.id} className="rounded border border-line p-2">
+              <li key={m.id} className="rounded-md border border-line px-3 py-1">
                 <details>
-                  <summary className="flex cursor-pointer items-center justify-between text-sm">
+                  <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-sm">
                     <span>{m.label} <span className="font-mono text-xs text-muted">{m.code}</span> {m.requiresReference && <Badge tone="blue">réf. requise</Badge>} {!m.active && <Badge>désactivé</Badge>}</span>
-                    <span className="text-xs text-muted">{m._count.payments} paiement(s) ✎</span>
+                    <span className="shrink-0 text-xs text-muted">{m._count.payments} paiement(s) · <span className="font-semibold text-brand">Modifier</span></span>
                   </summary>
                   <Form action={savePaymentMode.bind(null, m.id)} className="mt-2 grid grid-cols-2 items-end gap-2">
                     <input type="hidden" name="code" value={m.code} />
@@ -99,11 +99,11 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
           {discounts.length === 0 && <p className="text-sm text-muted">Aucune réduction configurée.</p>}
           <ul className="space-y-2">
             {discounts.map((d) => (
-              <li key={d.id} className="rounded border border-line p-2">
+              <li key={d.id} className="rounded-md border border-line px-3 py-1">
                 <details>
-                  <summary className="flex cursor-pointer items-center justify-between text-sm">
+                  <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 text-sm">
                     <span>{d.name} <span className="font-semibold text-brand">−{d.percent} %</span> {!d.active && <Badge>désactivée</Badge>}</span>
-                    <span className="text-xs text-muted">{d._count.enrollments} inscription(s) ✎</span>
+                    <span className="shrink-0 text-xs text-muted">{d._count.enrollments} inscription(s) · <span className="font-semibold text-brand">Modifier</span></span>
                   </summary>
                   <Form action={saveDiscountType.bind(null, d.id)} className="mt-2 grid grid-cols-2 items-end gap-2">
                     <Input label="Nom" name="name" defaultValue={d.name} />
@@ -115,7 +115,7 @@ export default async function FinanceSettings({ searchParams }: { searchParams: 
               </li>
             ))}
           </ul>
-          <Form action={saveDiscountType.bind(null, null)} className="mt-4 grid grid-cols-[1fr_110px_auto] items-end gap-2 border-t border-line pt-4" resetOnSuccess>
+          <Form action={saveDiscountType.bind(null, null)} className="mt-4 grid grid-cols-[1fr_5.5rem] items-end gap-2 border-t border-line pt-4 sm:grid-cols-[1fr_6rem_auto]" resetOnSuccess>
             <Input label="Nouvelle réduction" name="name" placeholder="ex. Fratrie" />
             <Input label="%" name="percent" type="number" min={1} max={100} />
             <Submit variant="secondary">Ajouter</Submit>

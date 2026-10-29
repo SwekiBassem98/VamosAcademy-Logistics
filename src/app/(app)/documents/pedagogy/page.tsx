@@ -38,8 +38,8 @@ export default async function Pedagogy({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <div className="no-print mx-auto mb-4 flex max-w-5xl justify-between">
-        <Link href="/documents" className="text-sm text-muted hover:text-brand">← Documents</Link><PrintButton />
+      <div className="no-print mx-auto mb-4 flex max-w-5xl flex-wrap items-center justify-between gap-2">
+        <Link href="/documents" className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Documents</Link><PrintButton />
       </div>
       <DocPage wide>
         <DocHeader title="Synthèse pédagogique" reference={g.name} lines={[`${g.subject.name} · ${g.level.name}`, term ? `Trimestre ${term}` : `Année ${g.schoolYear.label}`, g.teacher ? `${g.teacher.lastName} ${g.teacher.firstName}` : ""]} />

@@ -45,7 +45,7 @@ async function crawlRole(role: string, email: string): Promise<{ visited: number
     while (queue.length && seen.size < MAX_PAGES) {
       const [url, from] = queue.shift()!;
       // une seule visite par « forme » d'URL avec identifiant, pour rester rapide
-      const shape = url.replace(/[a-z0-9]{20,}/g, ":id").replace(/\?.*$/, (q) => (q.length > 60 ? "?…" : q));
+      const shape = url.replace(/[a-z0-9]{20,}/g, ":id").replace(/\d{4}-\d{2}(-\d{2})?/g, ":date").replace(/\?.*$/, (q) => (q.length > 60 ? "?…" : q));
       if (seen.has(shape)) continue;
       seen.add(shape);
       const res = await fetch(BASE + url, { headers: { cookie: `vamos_session=${token}` }, redirect: "manual" });
