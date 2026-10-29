@@ -11,11 +11,12 @@ import { studentInvoices } from "@/server/services/finance";
 import { can } from "@/lib/permissions";
 import { formatDate, formatDateTime, formatMoney, formatPeriod, todayISO } from "@/lib/format";
 import { STATUS_LABEL as INV_LABEL } from "@/lib/billing";
-import { ATTENDANCE_LABEL, METHOD_LABEL } from "@/lib/labels";
+import { ATTENDANCE_LABEL } from "@/lib/labels";
+import { PLAN_LABEL } from "@/lib/billing";
 import { FIELD_LABELS, type Change } from "@/lib/history";
 import { weightedAverage, formatScore, KIND_LABEL } from "@/lib/grades";
 import { StudentFields, levelOptions, STATUS_LABEL, STATUS_TONE } from "../student-fields";
-import { updateStudent, addGuardian, updateGuardian, unlinkGuardian, enrollStudent, endEnrollment, archiveStudent, restoreStudent } from "../actions";
+import { updateStudent, addGuardian, updateGuardian, unlinkGuardian, enrollStudent, endEnrollment, archiveStudent, restoreStudent, changeTerms } from "../actions";
 
 const INV_TONE = { PAYEE: "green", PARTIELLE: "amber", IMPAYEE: "gray", EN_RETARD: "red" } as const;
 const ATT_TONE = { PRESENT: "green", ABSENT: "red", RETARD: "amber", EXCUSE: "blue" } as const;
@@ -42,7 +43,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   const teacherGroups = user.role === "ENSEIGNANT" ? { group: { teacherId: user.teacherId ?? "" } } : {};
   const [invoices, payments, groups, discounts, levels, attendance, grades, history] = await Promise.all([
     finance ? studentInvoices(id, year?.id) : [],
-    finance ? db.payment.findMany({ where: { studentId: id }, include: { schoolYear: true }, orderBy: { paidAt: "desc" } }) : [],
+    finance ? db.payment.findMany({ where: { studentId: id }, include: { schoolYear: true, mode: true, correctedBy: { select: { receiptNo: true } } }, orderBy: { paidAt: "desc" } }) : [],
     write && year ? db.group.findMany({
       where: { schoolYearId: year.id, active: true, enrollments: { none: { studentId: id } } },
       include: { subject: true, level: true, _count: { select: { enrollments: { where: { status: "ACTIVE" } } } } },
@@ -75,6 +76,8 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
         subtitle={<span>{s.code} · {s.level ? `${s.level.cycle.name} — ${s.level.name}` : "Niveau non renseigné"}{s.className && ` · ${s.className}`}{s.fullNameAr && <span dir="rtl" className="ml-2">{s.fullNameAr}</span>}</span>}
         actions={<>
           <LinkButton href={`/students/${s.id}/fiche`} variant="secondary"><Printer className="size-4" /> Fiche d&apos;inscription</LinkButton>
+          {can(user.role, "grades.read") && <LinkButton href={`/students/${s.id}/bulletin`} variant="secondary">Bulletin</LinkButton>}
+          {finance && <LinkButton href={`/students/${s.id}/releve`} variant="secondary">Relevé de compte</LinkButton>}
           {finance && s.status !== "ARCHIVE" && can(user.role, "payments.write") && <LinkButton href={`/payments/new?student=${s.id}`}>Encaisser</LinkButton>}
           {can(user.role, "students.write") && (s.status === "ARCHIVE"
             ? <ConfirmAction action={restoreStudent.bind(null, s.id)} variant="secondary" label="Réactiver" title="Réactiver ce dossier ?" message="Le dossier repasse au statut actif. Les inscriptions terminées ne sont pas rouvertes." />
@@ -107,6 +110,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                   <Td className="text-xs">{formatDate(e.startDate)}{e.endDate && <> → {formatDate(e.endDate)}</>}</Td>
                   <Td className="tabular-nums">{formatMoney(e.monthlyFee)}
                     {e.discountPercent > 0 && <span className="block text-xs text-muted">{e.discountType?.name ?? "Réduction"} −{e.discountPercent} % (base {formatMoney(e.baseFee)})</span>}
+                    <span className="block text-xs text-muted">{PLAN_LABEL[e.plan]}</span>
                   </Td>
                   <Td><Badge tone={e.status === "ACTIVE" ? "green" : "gray"}>{e.status === "ACTIVE" ? "en cours" : "terminée"}</Badge></Td>
                   <Td>{write && e.status === "ACTIVE" && (
@@ -119,6 +123,22 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                 </tr>
               ))}
             </Table>
+            {write && can(user.role, "payments.write") && s.enrollments.some((e) => e.status === "ACTIVE") && (
+              <details className="mt-3 border-t border-line pt-3">
+                <summary className="cursor-pointer text-sm font-medium text-navy">Modifier le tarif ou l&apos;échéancier d&apos;une inscription</summary>
+                <p className="mt-2 text-xs text-muted">Les échéances non payées à partir du mois indiqué sont annulées (motif tracé) puis recréées ; celles déjà réglées, même partiellement, sont conservées.</p>
+                {s.enrollments.filter((e) => e.status === "ACTIVE").map((e) => (
+                  <Form key={e.id} action={changeTerms.bind(null, e.id)} className="mt-3 grid items-end gap-3 rounded border border-line p-3 sm:grid-cols-2 lg:grid-cols-5">
+                    <p className="text-sm font-medium sm:col-span-2 lg:col-span-5">{e.group.name}</p>
+                    <Input label="Mensualité (DT)" name="monthlyFee" defaultValue={(e.monthlyFee / 1000).toFixed(3).replace(".", ",")} inputMode="decimal" />
+                    <Select label="Échéancier" name="plan" defaultValue={e.plan} options={Object.entries(PLAN_LABEL).map(([value, label]) => ({ value, label }))} />
+                    <Input label="À partir du mois" name="fromPeriod" type="month" defaultValue={todayISO().slice(0, 7)} />
+                    <Input label="Motif *" name="reason" placeholder="ex. accord de la direction" />
+                    <Submit variant="secondary">Appliquer</Submit>
+                  </Form>
+                ))}
+              </details>
+            )}
             {write && year && (
               <Form action={enrollStudent.bind(null, s.id)} className="mt-4 grid items-end gap-3 border-t border-line pt-4 sm:grid-cols-2 lg:grid-cols-4" resetOnSuccess>
                 <p className="text-sm font-semibold text-navy sm:col-span-2 lg:col-span-4">Nouvelle inscription — année {year.label}</p>
@@ -129,6 +149,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                   }))} />
                 <Input label="Date d'entrée *" name="startDate" type="date" defaultValue={todayISO()} />
                 <Select label="Réduction autorisée" name="discountTypeId" placeholder="Aucune" options={discounts.map((d) => ({ value: d.id, label: `${d.name} (−${d.percent} %)` }))} />
+                <Select label="Échéancier" name="plan" options={Object.entries(PLAN_LABEL).map(([value, label]) => ({ value, label }))} />
                 <Input label="Justification de la réduction" name="discountNote" wrapperClass="sm:col-span-2" placeholder="ex. frère inscrit : VA-2026-0012" />
                 <Checkbox label="Facturer les frais d'inscription du groupe" name="chargeRegistration" defaultChecked />
                 <Submit>Inscrire</Submit>
@@ -137,11 +158,11 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
           </Card>
 
           {finance && (
-            <Card title={`Échéancier ${year?.label ?? ""}`}>
+            <Card title={`Échéancier ${year?.label ?? ""}`} actions={<Link href={`/students/${s.id}/releve`} className="text-xs text-brand">Relevé de compte →</Link>}>
               <Table head={["Période", "Groupe", "Échéance", "Montant", "Payé", "Reste", "Statut"]} empty={invoices.length === 0}>
                 {invoices.map((i) => (
                   <tr key={i.id}>
-                    <Td className="capitalize">{formatPeriod(i.period)}</Td>
+                    <Td className="capitalize">{formatPeriod(i.period)}{i.months > 1 && <span className="block text-xs normal-case text-muted">{i.months} mois</span>}</Td>
                     <Td>{i.enrollment.group.name}</Td>
                     <Td>{formatDate(i.dueDate)}</Td>
                     <Td className="tabular-nums">{formatMoney(i.amount)}</Td>
@@ -162,9 +183,9 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                     <Td className="font-mono text-xs">{p.receiptNo}</Td>
                     <Td>{p.schoolYear.label}</Td>
                     <Td>{formatDate(p.paidAt)}</Td>
-                    <Td>{METHOD_LABEL[p.method]}</Td>
+                    <Td>{p.mode.label}</Td>
                     <Td className={p.cancelledAt ? "tabular-nums line-through" : "tabular-nums font-medium"}>{formatMoney(p.amount)}</Td>
-                    <Td>{p.cancelledAt ? <Badge tone="red">annulé</Badge> : <Link href={`/payments/${p.id}`} className="text-xs text-brand">Voir le reçu</Link>}</Td>
+                    <Td>{p.correctedBy ? <Link href={`/payments/${p.id}`}><Badge tone="amber">corrigé → {p.correctedBy.receiptNo}</Badge></Link> : p.cancelledAt ? <Link href={`/payments/${p.id}`}><Badge tone="red">annulé</Badge></Link> : <Link href={`/payments/${p.id}`} className="text-xs text-brand">Voir le reçu</Link>}</Td>
                   </tr>
                 ))}
               </Table>

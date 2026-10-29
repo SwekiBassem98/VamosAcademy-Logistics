@@ -1,12 +1,13 @@
 import { Card, PageHeader, Forbidden, Badge, Button } from "@/components/ui";
-import { Form, Input, Submit, Textarea, Checkbox } from "@/components/form";
+import { Form, Input, Submit, Textarea } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
+import { SettingsTabs } from "./tabs";
 import { can } from "@/lib/permissions";
 import { demoCounts } from "@/server/services/demo";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { formatDate, formatPeriod } from "@/lib/format";
-import { activateYear, createSchoolYear, generateInvoices, saveSettings, updateYearBilling, saveDiscountType, purgeDemo } from "./actions";
+import { activateYear, createSchoolYear, generateInvoices, saveSettings, updateYearBilling, purgeDemo } from "./actions";
 
 export const metadata = { title: "Paramètres" };
 
@@ -24,15 +25,15 @@ function monthsBetween(start: Date, end: Date): string[] {
 export default async function Settings() {
   const user = await pageUser("settings.manage");
   if (!user) return <Forbidden />;
-  const [c, years, discounts, demo] = await Promise.all([
+  const [c, years, demo] = await Promise.all([
     db.centerSettings.findUnique({ where: { id: 1 } }),
     db.schoolYear.findMany({ orderBy: { label: "desc" } }),
-    db.discountType.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { enrollments: true } } } }),
     demoCounts(),
   ]);
   return (
     <>
       <PageHeader title="Paramètres du centre" />
+      <SettingsTabs active="general" />
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Informations (en-tête des reçus)">
           <Form action={saveSettings} className="space-y-4">
@@ -60,33 +61,6 @@ export default async function Settings() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title="Réductions autorisées">
-          <p className="mb-3 text-xs text-muted">Seules ces réductions peuvent être appliquées lors d&apos;une inscription. Modifier un pourcentage ne change pas les inscriptions existantes.</p>
-          {discounts.length === 0 && <p className="text-sm text-muted">Aucune réduction configurée.</p>}
-          <ul className="space-y-2">
-            {discounts.map((d) => (
-              <li key={d.id} className="rounded border border-line p-2">
-                <details>
-                  <summary className="flex cursor-pointer items-center justify-between text-sm">
-                    <span>{d.name} <span className="font-semibold text-brand">−{d.percent} %</span> {!d.active && <Badge>désactivée</Badge>}</span>
-                    <span className="text-xs text-muted">{d._count.enrollments} inscription(s) ✎</span>
-                  </summary>
-                  <Form action={saveDiscountType.bind(null, d.id)} className="mt-2 grid grid-cols-2 items-end gap-2">
-                    <Input label="Nom" name="name" defaultValue={d.name} />
-                    <Input label="Pourcentage" name="percent" type="number" min={1} max={100} defaultValue={d.percent} />
-                    <Checkbox label="Active" name="active" defaultChecked={d.active} />
-                    <Submit variant="secondary">Enregistrer</Submit>
-                  </Form>
-                </details>
-              </li>
-            ))}
-          </ul>
-          <Form action={saveDiscountType.bind(null, null)} className="mt-4 grid grid-cols-[1fr_110px_auto] items-end gap-2 border-t border-line pt-4" resetOnSuccess>
-            <Input label="Nouvelle réduction" name="name" placeholder="ex. Fratrie" />
-            <Input label="%" name="percent" type="number" min={1} max={100} />
-            <Submit variant="secondary">Ajouter</Submit>
-          </Form>
-        </Card>
         {can(user.role, "users.manage") && (
           <Card title="Données de démonstration">
             <p className="text-sm text-gray-700">Les données fictives sont marquées <Badge tone="amber">DÉMO</Badge> partout dans l&apos;application et n&apos;apparaissent jamais comme réelles sur les documents (mention imprimée).</p>

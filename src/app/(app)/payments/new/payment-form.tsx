@@ -4,11 +4,10 @@ import { useState } from "react";
 import { Form, Input, Select, Submit, Textarea } from "@/components/form";
 import { createPayment } from "../actions";
 import { formatMoney, moneyInput } from "@/lib/format";
-import { METHOD_LABEL } from "@/lib/labels";
 
 export type OpenInv = { id: string; label: string; due: string; remaining: number; late: boolean };
 
-export function PaymentForm({ studentId, invoices, today }: { studentId: string; invoices: OpenInv[]; today: string }) {
+export function PaymentForm({ studentId, invoices, today, modes }: { studentId: string; invoices: OpenInv[]; today: string; modes: { value: string; label: string }[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set(invoices.filter((i) => i.late).map((i) => i.id)));
   const total = invoices.filter((i) => selected.has(i.id)).reduce((s, i) => s + i.remaining, 0);
   const [amount, setAmount] = useState(moneyInput(total));
@@ -35,12 +34,13 @@ export function PaymentForm({ studentId, invoices, today }: { studentId: string;
             </label>
           ))}
         </div>
-        <p className="mt-1 text-xs text-muted">Sans sélection, le montant est affecté automatiquement aux échéances les plus anciennes. Un montant partiel est accepté.</p>
+        <p className="mt-1 text-xs text-muted">Sans sélection, le montant est affecté automatiquement aux échéances les plus anciennes. Un paiement partiel est accepté : le reste demeure dû.</p>
+        <p className="mt-1 text-sm">Sélection : <strong className="tabular-nums">{formatMoney(total)}</strong></p>
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-4">
         <Input label="Montant (DT) *" name="amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-        <Select label="Mode *" name="method" options={Object.entries(METHOD_LABEL).map(([value, label]) => ({ value, label }))} />
-        <Input label="Date *" name="paidAt" type="date" defaultValue={today} />
+        <Select label="Moyen de paiement *" name="modeId" options={modes} />
+        <Input label="Date *" name="paidAt" type="date" defaultValue={today} max={today} />
         <Input label="Référence (n° chèque…)" name="reference" />
       </div>
       <Textarea label="Note" name="note" />

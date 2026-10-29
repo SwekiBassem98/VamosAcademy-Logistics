@@ -1,34 +1,55 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePermission } from "@/server/auth";
 import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { runAction, type ActionState } from "@/server/action";
-import { getActiveYear } from "@/server/services/finance";
+import { createExpense as create, cancelExpense as cancel, correctExpense as correct, addAttachments } from "@/server/services/expenses";
 import { expenseSchema, formToObject } from "@/lib/validation";
-import { parseDay } from "@/lib/format";
+
+const files = (fd: FormData) => fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
 
 export async function createExpense(_: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(async () => {
     const user = await requirePermission("expenses.write");
     const v = expenseSchema.parse(formToObject(fd));
-    const year = await getActiveYear();
-    const e = await db.expense.create({ data: { ...v, spentAt: parseDay(v.spentAt), schoolYearId: year.id, createdById: user.id } });
-    await audit(user.id, "expense.create", "Expense", e.id, { ...v });
+    const f = files(fd);
+    await create(v, f, user.id);
     revalidatePath("/expenses");
-    return "Dépense enregistrée.";
+    return f.length ? "Dépense enregistrée avec justificatif." : "Dépense enregistrée. Pensez à joindre le justificatif.";
   });
 }
 
-export async function deleteExpense(id: string) {
-  const user = await requirePermission("expenses.write");
-  const cur = await db.expense.findUnique({ where: { id } });
-  if (!cur) return { error: "Dépense introuvable." };
-  const e = await db.expense.delete({ where: { id } });
-  await audit(user.id, "expense.delete", "Expense", id, { label: e.label, amount: e.amount, spentAt: e.spentAt.toISOString() });
-  revalidatePath("/expenses");
+export async function attachToExpense(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("expenses.write");
+    await addAttachments(id, files(fd), user.id);
+    revalidatePath(`/expenses/${id}`);
+    return "Justificatif ajouté.";
+  });
+}
+
+export async function cancelExpense(id: string, fd: FormData): Promise<ActionState> {
+  const res = await runAction(async () => {
+    const user = await requirePermission("expenses.write");
+    await cancel(id, String(fd.get("reason") ?? ""), user.id);
+  });
+  revalidatePath(`/expenses/${id}`);
+  return res;
+}
+
+export async function correctExpense(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  let newId = "";
+  const res = await runAction(async () => {
+    const user = await requirePermission("expenses.write");
+    const v = expenseSchema.parse(formToObject(fd));
+    newId = (await correct(id, v, String(fd.get("reason") ?? ""), user.id)).id;
+  });
+  if (res?.ok) redirect(`/expenses/${newId}`);
+  return res;
 }
 
 export async function createCategory(_: ActionState, fd: FormData): Promise<ActionState> {

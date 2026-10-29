@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { PageHeader, Forbidden } from "@/components/ui";
+import { PrintButton } from "@/components/print-button";
+import { DocHeader, DocFooter } from "@/components/document";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { formatMinutes, WEEKDAYS } from "@/lib/format";
 
 export const metadata = { title: "Emploi du temps" };
 
-export default async function Schedule({ searchParams }: { searchParams: Promise<{ room?: string; teacher?: string }> }) {
+export default async function Schedule({ searchParams }: { searchParams: Promise<{ room?: string; teacher?: string; print?: string }> }) {
   const user = await pageUser("academics.read");
   if (!user) return <Forbidden />;
   const sp = await searchParams;
@@ -24,9 +26,15 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <PageHeader title="Emploi du temps" subtitle="Créneaux hebdomadaires de l'année active. Les créneaux se gèrent depuis la fiche de chaque groupe." />
+      <div className="no-print"><PageHeader title="Emploi du temps" subtitle="Créneaux hebdomadaires de l'année active. Les créneaux se gèrent depuis la fiche de chaque groupe." actions={<PrintButton auto={sp.print === "1"} />} /></div>
+      <div className="mb-4 hidden print:block">
+        <DocHeader title="Emploi du temps" lines={[
+          ...(teacherId && teachers.length ? [`Enseignant : ${teachers.find((t) => t.id === teacherId)?.lastName ?? ""}`] : []),
+          ...(sp.room ? [`Salle : ${rooms.find((r) => r.id === sp.room)?.name ?? ""}`] : []),
+        ]} />
+      </div>
       {user.role !== "ENSEIGNANT" && (
-        <form className="mb-4 flex flex-wrap gap-2">
+        <form className="no-print mb-4 flex flex-wrap gap-2">
           <select name="room" defaultValue={sp.room ?? ""} className="input w-48" aria-label="Salle">
             <option value="">Toutes les salles</option>
             {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -58,6 +66,7 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
           );
         })}
       </div>
+      <div className="hidden print:block"><DocFooter /></div>
     </>
   );
 }

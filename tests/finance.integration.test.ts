@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("next/headers", () => ({ cookies: vi.fn() }));
 
 const { db } = await import("@/server/db");
-const { resetTestDb } = await import("./db-reset");
+const { resetTestDb, seedPaymentModes } = await import("./db-reset");
 const finance = await import("@/server/services/finance");
 const { defaultBillingMonths } = await import("@/lib/billing");
 
@@ -20,6 +20,7 @@ let uid = "";
 
 beforeAll(async () => {
   await resetTestDb(db, url);
+  await seedPaymentModes(db);
   uid = (await db.user.create({ data: { email: "caisse@test.tn", fullName: "Caisse", role: "RESPONSABLE", passwordHash: "x" } })).id;
   const year = await db.schoolYear.create({
     data: { label: "2026-2027", startDate: new Date("2026-09-01"), endDate: new Date("2027-06-30"), billingMonths: defaultBillingMonths(2026), dueDay: 10, active: true },
@@ -40,8 +41,8 @@ describe("finances (intégration)", () => {
   });
 
   it("encaisse en FIFO avec numéro de reçu séquentiel", async () => {
-    const p1 = await finance.recordPayment({ studentId, amount: 75000, method: "ESPECES", reference: null, paidAt: "2026-10-20", note: null, invoiceIds: [] }, uid);
-    const p2 = await finance.recordPayment({ studentId, amount: 25000, method: "D17", reference: "TX1", paidAt: "2026-10-21", note: null, invoiceIds: [] }, uid);
+    const p1 = await finance.recordPayment({ studentId, amount: 75000, modeId: "mode_especes", reference: null, paidAt: "2026-10-20", note: null, invoiceIds: [] }, uid);
+    const p2 = await finance.recordPayment({ studentId, amount: 25000, modeId: "mode_d17", reference: "TX1", paidAt: "2026-10-21", note: null, invoiceIds: [] }, uid);
     expect(p1.receiptNo).toBe("R-2026-000001");
     expect(p2.receiptNo).toBe("R-2026-000002");
     const inv = await finance.studentInvoices(studentId);
@@ -52,7 +53,7 @@ describe("finances (intégration)", () => {
   });
 
   it("refuse un trop-perçu", async () => {
-    await expect(finance.recordPayment({ studentId, amount: 999_000_000, method: "ESPECES", reference: null, paidAt: "2026-10-22", note: null, invoiceIds: [] }, uid)).rejects.toThrow(/dépasse/);
+    await expect(finance.recordPayment({ studentId, amount: 999_000_000, modeId: "mode_especes", reference: null, paidAt: "2026-10-22", note: null, invoiceIds: [] }, uid)).rejects.toThrow(/dépasse/);
   });
 
   it("une annulation rend les échéances de nouveau dues et apparaît dans les impayés", async () => {

@@ -6,7 +6,7 @@ import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { runAction, BusinessError, type ActionState } from "@/server/action";
 import { syncAllInvoices } from "@/server/services/finance";
-import { schoolYearSchema, settingsSchema, discountTypeSchema, formToObject } from "@/lib/validation";
+import { schoolYearSchema, settingsSchema, discountTypeSchema, feeRuleSchema, paymentModeSchema, templateSchema, formToObject } from "@/lib/validation";
 import { purgeDemoData } from "@/server/services/demo";
 import { defaultBillingMonths } from "@/lib/billing";
 import { parseDay } from "@/lib/format";
@@ -92,5 +92,63 @@ export async function purgeDemo(fd: FormData): Promise<ActionState> {
     await audit(user.id, "demo.purge", "System", null, res);
     revalidatePath("/", "layout");
     return `Données de démonstration supprimées : ${res.students} élève(s), ${res.groups} groupe(s), ${res.teachers} enseignant(s).`;
+  });
+}
+
+export async function saveFeeRule(_: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("settings.manage");
+    const v = feeRuleSchema.parse(formToObject(fd));
+    const year = await db.schoolYear.findFirst({ where: { id: String(fd.get("schoolYearId") ?? "") } });
+    if (!year) throw new BusinessError("Année scolaire inconnue.");
+    if (v.levelId && v.cycleId) {
+      const lv = await db.level.findUniqueOrThrow({ where: { id: v.levelId } });
+      if (lv.cycleId !== v.cycleId) throw new BusinessError("Le niveau choisi n'appartient pas à ce cycle.");
+    }
+    const key = { schoolYearId: year.id, cycleId: v.levelId ? null : v.cycleId, levelId: v.levelId, subjectId: v.subjectId };
+    const existing = await db.feeRule.findFirst({ where: key });
+    const data = { ...key, monthlyFee: v.monthlyFee, registrationFee: v.registrationFee ?? 0 };
+    const rule = existing ? await db.feeRule.update({ where: { id: existing.id }, data }) : await db.feeRule.create({ data });
+    await audit(user.id, existing ? "fee.update" : "fee.create", "FeeRule", rule.id, data);
+    revalidatePath("/settings");
+    return existing ? "Tarif mis à jour (les groupes existants gardent leur tarif)." : "Tarif ajouté à la grille.";
+  });
+}
+
+export async function deleteFeeRule(id: string) {
+  const user = await requirePermission("settings.manage");
+  const r = await db.feeRule.delete({ where: { id } });
+  await audit(user.id, "fee.delete", "FeeRule", id, { monthlyFee: r.monthlyFee, levelId: r.levelId, subjectId: r.subjectId, cycleId: r.cycleId });
+  revalidatePath("/settings");
+}
+
+export async function savePaymentMode(id: string | null, _: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("settings.manage");
+    const v = paymentModeSchema.parse(formToObject(fd));
+    const active = id ? fd.get("active") === "on" : true;
+    if (id && !active) {
+      const remaining = await db.paymentMode.count({ where: { active: true, NOT: { id } } });
+      if (!remaining) throw new BusinessError("Au moins un moyen de paiement doit rester actif.");
+    }
+    const order = id ? undefined : (await db.paymentMode.count()) + 1;
+    const m = id
+      ? await db.paymentMode.update({ where: { id }, data: { label: v.label, requiresReference: v.requiresReference, active } })
+      : await db.paymentMode.create({ data: { ...v, order } });
+    await audit(user.id, id ? "paymentMode.update" : "paymentMode.create", "PaymentMode", m.id, { ...v, active });
+    revalidatePath("/settings");
+    return "Moyen de paiement enregistré.";
+  });
+}
+
+export async function saveTemplate(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("settings.manage");
+    const v = templateSchema.parse(formToObject(fd));
+    const active = fd.get("active") === "on";
+    await db.messageTemplate.update({ where: { id }, data: { ...v, active } });
+    await audit(user.id, "template.update", "MessageTemplate", id, { ...v, active });
+    revalidatePath("/settings");
+    return "Modèle enregistré.";
   });
 }

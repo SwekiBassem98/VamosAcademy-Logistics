@@ -23,6 +23,7 @@ export async function purgeDemoData() {
 
   return db.$transaction(async (tx) => {
     const students = { student: { isDemo: true } };
+    await tx.message.deleteMany({ where: { studentId: { in: (await tx.student.findMany({ where: { isDemo: true }, select: { id: true } })).map((x) => x.id) } } });
     await tx.payment.deleteMany({ where: students }); // allocations en cascade
     await tx.invoice.deleteMany({ where: { enrollment: students } });
     await tx.attendanceRecord.deleteMany({ where: students });
@@ -31,6 +32,8 @@ export async function purgeDemoData() {
     const s = await tx.student.deleteMany({ where: { isDemo: true } }); // liens parents en cascade
     const g = await tx.guardian.deleteMany({ where: { isDemo: true, students: { none: {} } } });
     const gr = await tx.group.deleteMany({ where: { isDemo: true } }); // créneaux, séances, évaluations en cascade
+    await tx.expense.deleteMany({ where: { teacherPay: { teacher: { isDemo: true } } } });
+    await tx.teacherPay.deleteMany({ where: { teacher: { isDemo: true } } });
     await tx.user.deleteMany({ where: { email: { endsWith: "@demo.vamos-academy.tn" } } }); // comptes de test
     await tx.user.updateMany({ where: { teacher: { isDemo: true } }, data: { teacherId: null, active: false } });
     const t = await tx.teacher.deleteMany({ where: { isDemo: true, groups: { none: {} } } });

@@ -183,12 +183,48 @@ Rôles (v1) : **Administrateur**, **Responsable administratif**, **Comptable**, 
 | `expenses.read` / `expenses.write`, `reports.read` | ✔ | — | ✔ | — | — |
 | `users.manage` (+ purge des données de démo) | ✔ | — | — | — | — |
 | `settings.manage` | ✔ | — | — | — | — |
+| `payroll.manage` (calcul, validation, paiement des rémunérations) | ✔ | — | ✔ | — | — |
+| `messages.write` (préparer rappels et messages) | ✔ | ✔ | ✔ | — | — |
 | `audit.read` | ✔ | ✔ | — | — | — |
 
 Implémentation : `src/lib/permissions.ts` (table statique), `requirePermission()` dans chaque Server Action,
 `pageUser()` dans chaque page, `src/server/scope.ts` pour restreindre l'enseignant à ses groupes
 (listes, dossiers, appels, notes). Vérifié par `tests/actions.integration.test.ts` (actions appelées avec
 une vraie session pour chaque rôle) et par une matrice d'accès HTTP sur toutes les pages.
+
+## 4 bis. v2 — Finances, communication, documents (29/10/2026)
+
+### Audit avant travaux
+- Moyens de paiement codés en dur (énumération) → **table `PaymentMode` configurable** (migration de données sans perte).
+- Suppression physique des dépenses et des échéances à la sortie d'un élève → **annulation tracée** (`cancelledAt`, `cancelReason`) ; plus aucune suppression d'opération financière.
+- Tarifs uniquement par groupe → **grille tarifaire** `FeeRule` (année × cycle/niveau × matière, règle la plus précise).
+- Échéancier uniquement mensuel → **mensuel, trimestriel, annuel** par inscription (`Enrollment.plan`, `Invoice.months`).
+- Pas de rémunération enseignant, ni notifications persistantes, ni messages, ni PDF/Excel → ajoutés (ci-dessous).
+
+### Règles financières
+- Montants en **millimes entiers** partout (calculs, base, exports) ; pourcentages arrondis au millime (`percentOf`).
+- Paiement partiel ou complet ; affectation FIFO ou sur échéances choisies ; trop-perçu refusé ; date future refusée ;
+  référence obligatoire selon le moyen de paiement.
+- **Correction d'un paiement** : le reçu d'origine est annulé (« Corrigé par R-… : motif ») et un nouveau reçu lié est émis
+  (`Payment.correctsId`). **Correction d'une dépense** : même principe (`Expense.correctsId`). Annulations avec motif obligatoire.
+- **Changement de tarif / d'échéancier** : échéances non payées à partir du mois choisi annulées puis régénérées ; payées conservées.
+- **Rémunérations** (`TeacherPay`) : heure (séances pointées × durée du créneau), par séance, forfait mensuel, % des mensualités
+  encaissées sur ses groupes ; brouillon → validée (ajustement justifié) → payée (crée la dépense liée) ; annulation tracée.
+- Justificatifs de dépenses : PDF/JPG/PNG ≤ 5 Mo, type vérifié sur le contenu, stockés hors `public/` (`STORAGE_DIR`),
+  servis par `/api/attachments/[id]` après contrôle `expenses.read`.
+
+### Communication
+- `Notification` persistante (type, permission requise, enseignant ciblé, statut NOUVELLE → LUE → TRAITÉE, note de traitement),
+  dédoublonnée par `dedupeKey`. Événements : nouvel inscrit, paiement, absence. Alertes datées (≤ 1/min) : échéance à 3 jours,
+  retard mensuel, absence > 48 h sans justificatif (fermée automatiquement quand le motif est saisi), dépense sans justificatif.
+- `MessageTemplate` / `Message` : préparation de messages en français (parents, enseignants) à partir des données serveur ;
+  canal **MANUEL uniquement** (copier, lien WhatsApp ouvert par l'utilisateur, confirmation « envoyé »).
+  `src/server/messaging` définit l'interface `ChannelProvider` ; SMS, WhatsApp API et e-mail sont des emplacements désactivés.
+
+### Documents
+Reçu (impression + PDF serveur), fiche d'inscription, relevé de compte, bulletin, liste par groupe / par niveau, feuille de présence
+(vierge ou remplie), emploi du temps, synthèse pédagogique, état des impayés, rapport financier mensuel / annuel / période,
+fiche de rémunération. En-tête officiel + date d'édition (Africa/Tunis). Exports CSV et Excel (`/api/export/[kind]`).
 
 ## 5. Architecture technique
 
@@ -256,7 +292,8 @@ tests/
 | **E5** Finances | Échéancier, paiements, reçus, impayés, dépenses, rapport | Génération idempotente ; allocation FIFO testée ; reçu imprimable ; annulation tracée |
 | **E6** Présences & EDT | Créneaux avec conflits, appel | Conflit salle/enseignant refusé (test) ; taux de présence au tableau de bord |
 | **E7** v1 opérationnelle | Notes, disponibilités, conflits groupe/enseignant, archivage, doublons, réductions autorisées, historique, fiche d'inscription, 5 rôles, données de démo marquées | Tests d'intégration des actions par rôle ✅ |
-| **E8** P2 | Paie enseignants, SMS, PDF serveur, clôture/réinscription annuelle, portail parents | — |
+| **E8** v2 | Grille tarifaire, échéanciers, moyens de paiement, corrections tracées, justificatifs, paie enseignants, notifications, messages préparés, PDF/Excel, documents, filtres persistants, actions groupées | `tests/scenario.integration.test.ts` (critères 1 à 8) ✅ |
+| **E8b** P2 | Envoi réel SMS/WhatsApp (après accord), clôture et réinscription annuelle, portail parents, PDF serveur des autres documents | — |
 | **E9** Exploitation | Sauvegardes, déploiement, monitoring | Restauration testée sur base vierge |
 
 État d'avancement : voir `README.md` § « État ».

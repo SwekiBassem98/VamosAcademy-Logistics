@@ -88,6 +88,7 @@ model SchoolYear {
   groups        Group[]
   payments      Payment[]
   expenses      Expense[]
+  feeRules      FeeRule[]
   createdAt     DateTime  @default(now())
 }
 
@@ -100,6 +101,7 @@ model Cycle {
   order    Int
   levels   Level[]
   teachers TeacherCycle[]
+  feeRules FeeRule[]
 }
 
 model Level {
@@ -110,6 +112,7 @@ model Level {
   order    Int
   groups   Group[]
   students Student[]
+  feeRules FeeRule[]
 
   @@unique([cycleId, name])
 }
@@ -121,6 +124,7 @@ model Subject {
   color    String           @default("#C1272D")
   groups   Group[]
   teachers TeacherSubject[]
+  feeRules FeeRule[]
 }
 
 model Room {
@@ -132,9 +136,10 @@ model Room {
 }
 
 enum PayMode {
-  HORAIRE
-  MENSUEL
-  POURCENTAGE
+  HORAIRE // taux × heures de cours tenues
+  MENSUEL // forfait mensuel
+  POURCENTAGE // % des mensualités encaissées sur ses groupes
+  PAR_SEANCE // montant par séance tenue
 }
 
 model Teacher {
@@ -153,6 +158,7 @@ model Teacher {
   cycles       TeacherCycle[]
   availability TeacherAvailability[]
   groups       Group[]
+  pays         TeacherPay[]
   user         User?
   createdAt    DateTime              @default(now())
 }
@@ -318,11 +324,50 @@ model Enrollment {
   discountType    DiscountType?    @relation(fields: [discountTypeId], references: [id])
   discountPercent Int              @default(0)
   discountNote    String?
+  plan            PaymentPlan      @default(MENSUEL)
   status          EnrollmentStatus @default(ACTIVE)
   invoices        Invoice[]
   createdAt       DateTime         @default(now())
 
   @@unique([studentId, groupId])
+}
+
+// Échéancier choisi à l'inscription
+enum PaymentPlan {
+  MENSUEL
+  TRIMESTRIEL
+  ANNUEL
+}
+
+// Grille tarifaire : la règle la plus précise s'applique (niveau+matière > niveau > cycle+matière > matière > cycle > année)
+model FeeRule {
+  id              String     @id @default(cuid())
+  schoolYearId    String
+  schoolYear      SchoolYear @relation(fields: [schoolYearId], references: [id], onDelete: Cascade)
+  cycleId         String?
+  cycle           Cycle?     @relation(fields: [cycleId], references: [id])
+  levelId         String?
+  level           Level?     @relation(fields: [levelId], references: [id])
+  subjectId       String?
+  subject         Subject?   @relation(fields: [subjectId], references: [id])
+  monthlyFee      Int
+  registrationFee Int        @default(0)
+  createdAt       DateTime   @default(now())
+
+  @@index([schoolYearId])
+}
+
+// Moyens de paiement configurables (espèces, chèque, virement, D17…)
+model PaymentMode {
+  id                String       @id @default(cuid())
+  code              String       @unique
+  label             String
+  requiresReference Boolean      @default(false)
+  active            Boolean      @default(true)
+  order             Int          @default(0)
+  payments          Payment[]
+  expenses          Expense[]
+  teacherPays       TeacherPay[]
 }
 
 // Réductions autorisées, configurées par l'administration
@@ -346,21 +391,18 @@ model Invoice {
   enrollmentId String
   enrollment   Enrollment          @relation(fields: [enrollmentId], references: [id])
   kind         InvoiceKind         @default(MENSUALITE)
-  period       String // "AAAA-MM" ou "INSCRIPTION"
+  period       String // "AAAA-MM" (1er mois couvert) ou "INSCRIPTION"
+  months       Int                 @default(1) // nombre de mois couverts (trimestre = 3)
   amount       Int
   dueDate      DateTime
+  // Une échéance n'est jamais supprimée : elle est annulée (sortie, changement de tarif ou d'échéancier)
+  cancelledAt  DateTime?
+  cancelReason String?
   allocations  PaymentAllocation[]
   createdAt    DateTime            @default(now())
 
-  @@unique([enrollmentId, period])
+  @@index([enrollmentId, period])
   @@index([dueDate])
-}
-
-enum PaymentMethod {
-  ESPECES
-  CHEQUE
-  VIREMENT
-  D17
 }
 
 model Payment {
@@ -371,13 +413,18 @@ model Payment {
   schoolYearId String
   schoolYear   SchoolYear          @relation(fields: [schoolYearId], references: [id])
   amount       Int
-  method       PaymentMethod
+  modeId       String
+  mode         PaymentMode         @relation(fields: [modeId], references: [id])
   reference    String?
   paidAt       DateTime
   note         String?
   createdById  String?
   cancelledAt  DateTime?
   cancelReason String?
+  // Correction : le nouveau reçu pointe vers celui qu'il remplace (annulé, jamais supprimé)
+  correctsId   String?             @unique
+  corrects     Payment?            @relation("PaymentCorrection", fields: [correctsId], references: [id])
+  correctedBy  Payment?            @relation("PaymentCorrection")
   allocations  PaymentAllocation[]
   createdAt    DateTime            @default(now())
 
@@ -400,20 +447,173 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id           String          @id @default(cuid())
+  id           String              @id @default(cuid())
   schoolYearId String
-  schoolYear   SchoolYear      @relation(fields: [schoolYearId], references: [id])
+  schoolYear   SchoolYear          @relation(fields: [schoolYearId], references: [id])
   categoryId   String
-  category     ExpenseCategory @relation(fields: [categoryId], references: [id])
+  category     ExpenseCategory     @relation(fields: [categoryId], references: [id])
   label        String
   amount       Int
-  method       PaymentMethod   @default(ESPECES)
+  modeId       String
+  mode         PaymentMode         @relation(fields: [modeId], references: [id])
+  reference    String?
   spentAt      DateTime
-  isDemo       Boolean         @default(false)
+  isDemo       Boolean             @default(false)
   createdById  String?
-  createdAt    DateTime        @default(now())
+  // Annulation tracée (jamais de suppression) ; une correction crée une nouvelle dépense liée
+  cancelledAt  DateTime?
+  cancelReason String?
+  correctsId   String?             @unique
+  corrects     Expense?            @relation("ExpenseCorrection", fields: [correctsId], references: [id])
+  correctedBy  Expense?            @relation("ExpenseCorrection")
+  teacherPayId String?             @unique
+  teacherPay   TeacherPay?         @relation(fields: [teacherPayId], references: [id])
+  attachments  ExpenseAttachment[]
+  createdAt    DateTime            @default(now())
 
   @@index([spentAt])
+}
+
+// Justificatif (facture, ticket…) stocké hors du dossier public, servi après contrôle des droits
+model ExpenseAttachment {
+  id           String   @id @default(cuid())
+  expenseId    String
+  expense      Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  fileName     String
+  storedName   String   @unique
+  mimeType     String
+  size         Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+}
+
+// ───────────── Rémunérations enseignants ─────────────
+
+enum TeacherPayStatus {
+  BROUILLON
+  VALIDE
+  PAYE
+  ANNULE
+}
+
+model TeacherPay {
+  id             String           @id @default(cuid())
+  teacherId      String
+  teacher        Teacher          @relation(fields: [teacherId], references: [id])
+  period         String // "AAAA-MM"
+  payMode        PayMode
+  rate           Int // millimes (HORAIRE, MENSUEL, PAR_SEANCE) ou % (POURCENTAGE)
+  quantity       Int // minutes (HORAIRE), séances (PAR_SEANCE), assiette en millimes (POURCENTAGE), 1 (MENSUEL)
+  computedAmount Int
+  adjustment     Int              @default(0)
+  adjustmentNote String?
+  amount         Int // computedAmount + adjustment
+  details        Json?
+  status         TeacherPayStatus @default(BROUILLON)
+  validatedById  String?
+  validatedAt    DateTime?
+  paidAt         DateTime?
+  modeId         String?
+  mode           PaymentMode?     @relation(fields: [modeId], references: [id])
+  cancelledAt    DateTime?
+  cancelReason   String?
+  expense        Expense?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+
+  @@index([teacherId, period])
+}
+
+// ───────────── Notifications & messages ─────────────
+
+enum NotificationType {
+  NOUVEL_INSCRIT
+  PAIEMENT
+  ABSENCE
+  ECHEANCE
+  RETARD
+  JUSTIFICATIF
+  SYSTEME
+}
+
+enum NotificationStatus {
+  NOUVELLE
+  LUE
+  TRAITEE
+}
+
+model Notification {
+  id          String             @id @default(cuid())
+  type        NotificationType
+  title       String
+  body        String?
+  href        String?
+  permission  String // permission requise pour la voir (ex. payments.read)
+  teacherId   String? // si renseigné : visible aussi par cet enseignant (ses groupes)
+  dedupeKey   String?            @unique // évite les doublons des alertes générées automatiquement
+  status      NotificationStatus @default(NOUVELLE)
+  readAt      DateTime?
+  handledAt   DateTime?
+  handledById String?
+  handledNote String?
+  createdAt   DateTime           @default(now())
+
+  @@index([status, createdAt])
+}
+
+enum MessageAudience {
+  PARENT
+  ENSEIGNANT
+}
+
+// Seul MANUEL est actif (texte à copier / lien WhatsApp ouvert par l'utilisateur). SMS, WHATSAPP_API et EMAIL sont
+// prévus par l'architecture (src/server/messaging) mais désactivés tant qu'aucun fournisseur n'est configuré et autorisé.
+enum MessageChannel {
+  MANUEL
+  SMS
+  WHATSAPP_API
+  EMAIL
+}
+
+enum MessageStatus {
+  PREPARE
+  ENVOYE
+  ANNULE
+  ECHEC
+}
+
+model MessageTemplate {
+  id       String          @id @default(cuid())
+  code     String          @unique
+  name     String
+  audience MessageAudience
+  body     String
+  active   Boolean         @default(true)
+  messages Message[]
+}
+
+model Message {
+  id             String           @id @default(cuid())
+  batchId        String?
+  templateId     String?
+  template       MessageTemplate? @relation(fields: [templateId], references: [id])
+  audience       MessageAudience
+  channel        MessageChannel   @default(MANUEL)
+  recipientName  String
+  recipientPhone String?
+  studentId      String?
+  guardianId     String?
+  teacherId      String?
+  body           String
+  status         MessageStatus    @default(PREPARE)
+  error          String?
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  sentAt         DateTime?
+  sentById       String?
+
+  @@index([batchId])
+  @@index([status, createdAt])
 }
 
 // ───────────── Présences & notes ─────────────

@@ -19,7 +19,7 @@ vi.mock("next/headers", () => ({
 }));
 
 const { db } = await import("@/server/db");
-const { resetTestDb } = await import("./db-reset");
+const { resetTestDb, seedPaymentModes } = await import("./db-reset");
 const students = await import("@/app/(app)/students/actions");
 const academics = await import("@/app/(app)/academics/actions");
 const attendance = await import("@/app/(app)/attendance/actions");
@@ -46,6 +46,7 @@ async function loginAs(role: Role, teacherId?: string) {
 
 beforeAll(async () => {
   await resetTestDb(db, process.env.TEST_DATABASE_URL!);
+  await seedPaymentModes(db);
   const year = await db.schoolYear.create({
     data: { label: "2026-2027", startDate: new Date("2026-09-01T12:00:00Z"), endDate: new Date("2027-06-30T12:00:00Z"), billingMonths: defaultBillingMonths(2026), dueDay: 10, active: true },
   });
@@ -81,7 +82,7 @@ describe("permissions appliquées côté serveur", () => {
   });
   it("l'enseignant ne peut ni encaisser ni toucher aux groupes d'un collègue", async () => {
     await loginAs("ENSEIGNANT", ids.t1);
-    expect((await payments.createPayment(null, fd({ studentId: "x", amount: "10", method: "ESPECES", paidAt: "2026-10-01" })))?.error).toMatch(/Accès refusé/);
+    expect((await payments.createPayment(null, fd({ studentId: "x", amount: "10", modeId: "mode_especes", paidAt: "2026-10-01" })))?.error).toMatch(/Accès refusé/);
     expect((await attendance.saveAttendance(ids.g2, "2026-10-14", null, fd({})))?.error).toMatch(/Accès refusé/);
     expect((await grades.saveAssessment(null, null, fd({ groupId: ids.g2, title: "X", kind: "DEVOIR", term: "1", date: "2026-10-14", coefficient: "1", maxScore: "20" })))?.error).toMatch(/Accès refusé/);
   });
@@ -129,7 +130,7 @@ describe("élèves & inscriptions (responsable administratif)", () => {
     const third = await db.student.create({ data: { code: "VA-2026-0099", firstName: "C", lastName: "D" } });
     expect((await students.enrollStudent(third.id, null, fd({ groupId: ids.g1, startDate: "2026-10-15" })))?.error).toMatch(/complet/);
   });
-  it("archive un dossier : inscriptions terminées, échéances futures non payées retirées, motif tracé", async () => {
+  it("archive un dossier : inscriptions terminées, échéances futures annulées (non supprimées), motif tracé", async () => {
     const third = await db.student.findUniqueOrThrow({ where: { code: "VA-2026-0099" } });
     await students.enrollStudent(third.id, null, fd({ groupId: ids.g2, startDate: "2026-10-15" }));
     expect(await students.archiveStudent(third.id, fd({ reason: "x" }))).toEqual({ error: expect.stringMatching(/motif/) });
@@ -137,7 +138,12 @@ describe("élèves & inscriptions (responsable administratif)", () => {
     const s = await db.student.findUniqueOrThrow({ where: { id: third.id }, include: { enrollments: { include: { invoices: true } } } });
     expect(s.status).toBe("ARCHIVE");
     expect(s.enrollments[0].status).toBe("TERMINEE");
-    expect(s.enrollments[0].invoices.every((i) => i.period <= new Date().toISOString().slice(0, 7))).toBe(true);
+    const month = new Date().toISOString().slice(0, 7);
+    const inv = s.enrollments[0].invoices;
+    expect(inv.filter((i) => !i.cancelledAt).every((i) => i.period <= month)).toBe(true); // échéances futures non actives
+    const voided = inv.filter((i) => i.cancelledAt);
+    expect(voided.length).toBeGreaterThan(0); // jamais supprimées : annulées avec motif
+    expect(voided.every((i) => i.cancelReason?.includes("Déménagement"))).toBe(true);
     expect((await students.enrollStudent(third.id, null, fd({ groupId: ids.g1, startDate: "2026-10-15" })))?.error).toMatch(/archivé/);
   });
 });
@@ -181,7 +187,7 @@ describe("présences & notes (enseignant sur son groupe)", () => {
 describe("paiements (comptable vs responsable)", () => {
   it("le responsable encaisse mais ne peut pas annuler ; le comptable peut", async () => {
     await loginAs("RESPONSABLE");
-    expect((await payments.createPayment(null, fd({ studentId: ids.amine, amount: "45", method: "ESPECES", paidAt: "2026-10-20" })))?.ok).toBe(true);
+    expect((await payments.createPayment(null, fd({ studentId: ids.amine, amount: "45", modeId: "mode_especes", paidAt: "2026-10-20" })))?.ok).toBe(true);
     const p = await db.payment.findFirstOrThrow();
     expect((await payments.cancelPayment(p.id, fd({ reason: "Erreur" })))?.error).toMatch(/Accès refusé/);
     await loginAs("COMPTABLE");

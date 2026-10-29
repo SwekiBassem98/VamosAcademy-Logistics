@@ -186,3 +186,51 @@ describe("validation", () => {
     expect(slotSchema.safeParse({ groupId: "g", roomId: "r", weekday: 1, start: "16:00", end: "14:00" }).success).toBe(false);
   });
 });
+
+describe("échéanciers, grille tarifaire, paie, modèles", async () => {
+  const { planInvoices, resolveFee, percentOf, periodSpan } = await import("@/lib/billing");
+  const { computeTeacherPay } = await import("@/lib/payroll");
+  const { renderTemplate, missingVariables } = await import("@/lib/templates");
+  const months = defaultBillingMonths(2026); // sept → juin (10 mois)
+
+  it("découpe en mensuel, trimestriel et annuel sans perte de mois ni de millime", () => {
+    expect(planInvoices(months, "MENSUEL", 45000, 10)).toHaveLength(10);
+    const tri = planInvoices(months, "TRIMESTRIEL", 45000, 10);
+    expect(tri.map((t) => [t.period, t.months, t.amount])).toEqual([["2026-09", 3, 135000], ["2026-12", 3, 135000], ["2027-03", 3, 135000], ["2027-06", 1, 45000]]);
+    const an = planInvoices(months, "ANNUEL", 45500, 10);
+    expect(an).toHaveLength(1);
+    expect(an[0].amount).toBe(455000);
+    expect(tri.reduce((s, t) => s + t.amount, 0)).toBe(450000);
+    expect(periodSpan("2026-12", 3)).toEqual(["2026-12", "2027-01", "2027-02"]);
+  });
+  it("applique la règle tarifaire la plus précise", () => {
+    const rules = [
+      { id: "an", cycleId: null, levelId: null, subjectId: null, monthlyFee: 30000, registrationFee: 0 },
+      { id: "cy", cycleId: "sec", levelId: null, subjectId: null, monthlyFee: 60000, registrationFee: 10000 },
+      { id: "su", cycleId: null, levelId: null, subjectId: "phys", monthlyFee: 55000, registrationFee: 0 },
+      { id: "lvsu", cycleId: null, levelId: "bac", subjectId: "phys", monthlyFee: 70000, registrationFee: 10000 },
+    ];
+    expect(resolveFee(rules, { cycleId: "sec", levelId: "bac", subjectId: "phys" })?.id).toBe("lvsu");
+    expect(resolveFee(rules, { cycleId: "sec", levelId: "3e", subjectId: "phys" })?.id).toBe("su");
+    expect(resolveFee(rules, { cycleId: "sec", levelId: "3e", subjectId: "math" })?.id).toBe("cy");
+    expect(resolveFee(rules, { cycleId: "pri", levelId: "6e", subjectId: "fr" })?.id).toBe("an");
+    expect(resolveFee([], { cycleId: "x", levelId: "y", subjectId: "z" })).toBeNull();
+  });
+  it("calcule les pourcentages au millime, sans flottant résiduel", () => {
+    expect(percentOf(45500, 10)).toBe(4550);
+    expect(percentOf(33333, 50)).toBe(16667);
+    expect(Number.isInteger(percentOf(70001, 33))).toBe(true);
+  });
+  it("calcule la rémunération selon la modalité", () => {
+    const inp = { minutes: 450, sessions: 4, collected: 140000 };
+    expect(computeTeacherPay("HORAIRE", 15000, inp)).toEqual({ quantity: 450, amount: 112500 }); // 7,5 h × 15 DT
+    expect(computeTeacherPay("PAR_SEANCE", 20000, inp)).toEqual({ quantity: 4, amount: 80000 });
+    expect(computeTeacherPay("POURCENTAGE", 50, inp)).toEqual({ quantity: 140000, amount: 70000 });
+    expect(computeTeacherPay("MENSUEL", 600000, inp)).toEqual({ quantity: 1, amount: 600000 });
+  });
+  it("prépare les messages et signale les informations manquantes", () => {
+    const body = renderTemplate("Bonjour {parent}, {montant} dû pour {eleve}.", { parent: "M. Ben Ali", montant: "45,000 DT", eleve: "" });
+    expect(body).toBe("Bonjour M. Ben Ali, 45,000 DT dû pour [eleve].");
+    expect(missingVariables(body)).toEqual(["eleve"]);
+  });
+});

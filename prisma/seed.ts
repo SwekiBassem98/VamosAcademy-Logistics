@@ -8,6 +8,7 @@
 import { PrismaClient, type AttendanceStatus, type Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { defaultBillingMonths, dueDateFor, billableMonths } from "../src/lib/billing";
+import { DEFAULT_TEMPLATES } from "../src/lib/templates";
 
 const db = new PrismaClient();
 export const DEMO_EMAIL_DOMAIN = "demo.vamos-academy.tn";
@@ -61,6 +62,12 @@ async function main() {
     await db.expenseCategory.upsert({ where: { name }, update: {}, create: { name } });
   }
 
+  // Moyens de paiement (créés aussi par la migration finance_communication) et modèles de messages
+  for (const [i, [code, label, requiresReference]] of ([["ESPECES", "Espèces", false], ["CHEQUE", "Chèque", true], ["VIREMENT", "Virement bancaire", true], ["D17", "D17 / e-Dinar", true]] as const).entries()) {
+    await db.paymentMode.upsert({ where: { code }, update: {}, create: { id: `mode_${code.toLowerCase()}`, code, label, requiresReference, order: i + 1 } });
+  }
+  for (const t of DEFAULT_TEMPLATES) await db.messageTemplate.upsert({ where: { code: t.code }, update: {}, create: t });
+
   const adminEmail = "admin@vamos-academy.tn";
   const pwd = process.env.SEED_ADMIN_PASSWORD ?? "ChangezMoi!2026";
   await db.user.upsert({
@@ -83,6 +90,18 @@ async function demo(yearId: string, months: string[], dueDay: number) {
   const sub = async (code: string) => (await db.subject.findUniqueOrThrow({ where: { code } })).id;
   const cyc = async (name: string) => (await db.cycle.findUniqueOrThrow({ where: { name } })).id;
   const rooms = await db.room.findMany({ orderBy: { name: "asc" } });
+
+  // Grille tarifaire d'exemple (à remplacer par les tarifs réels dans Paramètres → Tarifs & paiements)
+  if (!(await db.feeRule.count({ where: { schoolYearId: yearId } }))) {
+    await db.feeRule.createMany({
+      data: [
+        { schoolYearId: yearId, cycleId: await cyc("Primaire"), monthlyFee: 40000, registrationFee: 0 },
+        { schoolYearId: yearId, cycleId: await cyc("Collège"), monthlyFee: 45000, registrationFee: 10000 },
+        { schoolYearId: yearId, cycleId: await cyc("Secondaire"), monthlyFee: 60000, registrationFee: 10000 },
+        { schoolYearId: yearId, levelId: await lv("Bac Sciences expérimentales"), subjectId: await sub("PHYS"), monthlyFee: 70000, registrationFee: 10000 },
+      ],
+    });
+  }
 
   const fratrie = await db.discountType.upsert({ where: { name: "Fratrie (exemple)" }, update: {}, create: { name: "Fratrie (exemple)", percent: 10 } });
   await db.discountType.upsert({ where: { name: "Bourse (exemple)" }, update: {}, create: { name: "Bourse (exemple)", percent: 30 } });
@@ -167,7 +186,7 @@ async function demo(yearId: string, months: string[], dueDay: number) {
       await db.payment.create({
         data: {
           receiptNo: `R-2026-${String(receipt).padStart(6, "0")}`, studentId: student.id, schoolYearId: yearId,
-          amount: toPay.reduce((s, x) => s + x.amount, 0), method: i % 4 === 0 ? "D17" : "ESPECES",
+          amount: toPay.reduce((s, x) => s + x.amount, 0), modeId: i % 4 === 0 ? "mode_d17" : "mode_especes", reference: i % 4 === 0 ? `D17-DEMO-${i}` : null,
           paidAt: day(i % 2 ? "2026-09-20" : "2026-10-05"), note: "Paiement de démonstration",
           allocations: { create: toPay.map((x) => ({ invoiceId: x.id, amount: x.amount })) },
         },
@@ -201,11 +220,11 @@ async function demo(yearId: string, months: string[], dueDay: number) {
   const cat = async (name: string) => (await db.expenseCategory.findUniqueOrThrow({ where: { name } })).id;
   await db.expense.createMany({
     data: [
-      { schoolYearId: yearId, categoryId: await cat("Loyer"), label: "Loyer septembre (démo)", amount: 800000, spentAt: day("2026-09-01"), isDemo: true },
-      { schoolYearId: yearId, categoryId: await cat("Loyer"), label: "Loyer octobre (démo)", amount: 800000, spentAt: day("2026-10-01"), isDemo: true },
-      { schoolYearId: yearId, categoryId: await cat("Électricité & eau"), label: "STEG septembre (démo)", amount: 145300, spentAt: day("2026-09-28"), isDemo: true },
-      { schoolYearId: yearId, categoryId: await cat("Fournitures"), label: "Feutres et papier (démo)", amount: 62500, spentAt: day("2026-10-12"), isDemo: true },
-      { schoolYearId: yearId, categoryId: await cat("Marketing"), label: "Affiches inscriptions (démo)", amount: 90000, spentAt: day("2026-09-05"), isDemo: true },
+      { schoolYearId: yearId, categoryId: await cat("Loyer"), label: "Loyer septembre (démo)", amount: 800000, modeId: "mode_virement", reference: "VIR-DEMO-09", spentAt: day("2026-09-01"), isDemo: true },
+      { schoolYearId: yearId, categoryId: await cat("Loyer"), label: "Loyer octobre (démo)", amount: 800000, modeId: "mode_virement", reference: "VIR-DEMO-10", spentAt: day("2026-10-01"), isDemo: true },
+      { schoolYearId: yearId, categoryId: await cat("Électricité & eau"), label: "STEG septembre (démo)", amount: 145300, modeId: "mode_especes", spentAt: day("2026-09-28"), isDemo: true },
+      { schoolYearId: yearId, categoryId: await cat("Fournitures"), label: "Feutres et papier (démo)", amount: 62500, modeId: "mode_especes", spentAt: day("2026-10-12"), isDemo: true },
+      { schoolYearId: yearId, categoryId: await cat("Marketing"), label: "Affiches inscriptions (démo)", amount: 90000, modeId: "mode_especes", spentAt: day("2026-09-05"), isDemo: true },
     ],
   });
   console.log(`✔ Données de démonstration (fictives, marquées DÉMO) créées. Comptes de test : <role>@${DEMO_EMAIL_DOMAIN} / Demo2026vamos`);

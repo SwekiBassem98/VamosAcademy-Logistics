@@ -7,7 +7,8 @@ import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { assertGroupAccess } from "@/server/scope";
 import { runAction, BusinessError, type ActionState } from "@/server/action";
-import { parseDay, todayISO } from "@/lib/format";
+import { formatDate, parseDay, todayISO } from "@/lib/format";
+import { notify, resolveByKey } from "@/server/services/notifications";
 
 const STATUSES: AttendanceStatus[] = ["PRESENT", "ABSENT", "RETARD", "EXCUSE"];
 
@@ -47,6 +48,17 @@ export async function saveAttendance(groupId: string, date: string, _: ActionSta
         date, absents: records.filter((r) => r.status === "ABSENT").length, retards: records.filter((r) => r.status === "RETARD").length,
       }, tx);
     });
+    // Notifications : une par absence ; les alertes « justificatif manquant » se ferment si un motif est saisi
+    const saved = await db.attendanceRecord.findMany({ where: { session: { groupId, date: day } }, include: { student: true } });
+    for (const r of saved) {
+      if (r.status === "ABSENT") {
+        await notify({
+          type: "ABSENCE", permission: "students.write", dedupeKey: `abs:${r.id}`,
+          title: `Absence : ${r.student.lastName} ${r.student.firstName}`, body: `${group.name} — ${formatDate(day)}`, href: `/students/${r.studentId}`,
+        });
+      }
+      if (r.note || r.status !== "ABSENT") await resolveByKey(`just:${r.id}`, r.note ? `Justificatif : ${r.note}` : "Statut modifié");
+    }
     revalidatePath("/attendance");
     const n = (st: AttendanceStatus) => records.filter((r) => r.status === st).length;
     return `Appel enregistré : ${n("PRESENT")} présent(s), ${n("RETARD")} retard(s), ${n("ABSENT")} absent(s), ${n("EXCUSE")} excusé(s).`;

@@ -9,6 +9,7 @@ import { audit } from "@/server/audit";
 import { runAction, BusinessError, type ActionState } from "@/server/action";
 import { getActiveYear } from "@/server/services/finance";
 import { assertSlotAllowed, assertTeacherCanTakeGroup } from "@/server/services/schedule";
+import { suggestedFee } from "@/server/services/fees";
 import { groupSchema, slotSchema, formToObject } from "@/lib/validation";
 import { diff } from "@/lib/history";
 
@@ -70,7 +71,13 @@ export async function deleteReference(kind: "room" | "subject" | "level", id: st
 }
 
 async function groupData(fd: FormData, groupId?: string) {
-  const v = groupSchema.parse(formToObject(fd));
+  const parsed = groupSchema.parse(formToObject(fd));
+  // Tarif vide → grille tarifaire de l'année
+  const yearId = groupId ? (await db.group.findUniqueOrThrow({ where: { id: groupId } })).schoolYearId : (await getActiveYear()).id;
+  const rule = parsed.monthlyFee == null || parsed.registrationFee == null ? await suggestedFee(yearId, parsed.levelId, parsed.subjectId) : null;
+  const monthlyFee = parsed.monthlyFee ?? rule?.monthlyFee;
+  if (monthlyFee == null) throw new BusinessError("Aucun tarif dans la grille pour ce niveau / cette matière : saisissez la mensualité ou complétez la grille tarifaire (Paramètres).");
+  const v = { ...parsed, monthlyFee, registrationFee: parsed.registrationFee ?? rule?.registrationFee ?? 0 };
   if (v.roomId) {
     const room = await db.room.findUniqueOrThrow({ where: { id: v.roomId } });
     if (room.capacity < v.capacity) throw new BusinessError(`${room.name} n'a que ${room.capacity} places pour une capacité de ${v.capacity}.`);

@@ -6,7 +6,7 @@ import { saveTeacher } from "./actions";
 
 export function payLabel(t: Pick<Teacher, "payMode" | "payRate">) {
   if (t.payMode === "POURCENTAGE") return `${t.payRate} % des mensualités`;
-  return `${formatMoney(t.payRate)} / ${t.payMode === "HORAIRE" ? "heure" : "mois"}`;
+  return `${formatMoney(t.payRate)} / ${t.payMode === "HORAIRE" ? "heure" : t.payMode === "PAR_SEANCE" ? "séance" : "mois"}`;
 }
 
 export async function TeacherForm({ t }: { t?: Teacher & { subjects: { subjectId: string }[]; cycles: { cycleId: string }[] } }) {
@@ -24,7 +24,7 @@ export async function TeacherForm({ t }: { t?: Teacher & { subjects: { subjectId
         <Input label="Téléphone *" name="phone" inputMode="tel" defaultValue={t?.phone} />
         <Input label="E-mail" name="email" type="email" defaultValue={t?.email ?? ""} />
         <Select label="Mode de rémunération" name="payMode" defaultValue={t?.payMode ?? "HORAIRE"}
-          options={[{ value: "HORAIRE", label: "À l'heure" }, { value: "MENSUEL", label: "Mensuel fixe" }, { value: "POURCENTAGE", label: "% des mensualités" }]} />
+          options={[{ value: "HORAIRE", label: "À l'heure" }, { value: "PAR_SEANCE", label: "Par séance" }, { value: "MENSUEL", label: "Forfait mensuel" }, { value: "POURCENTAGE", label: "% des mensualités encaissées" }]} />
         <Input label="Taux (DT ou %) *" name="payRate" inputMode="decimal" defaultValue={t ? (t.payMode === "POURCENTAGE" ? String(t.payRate) : moneyInput(t.payRate)) : ""} hint="DT par heure ou par mois, ou pourcentage" />
         <Textarea label="Notes" name="notes" defaultValue={t?.notes ?? ""} wrapperClass="sm:col-span-2" />
       </div>

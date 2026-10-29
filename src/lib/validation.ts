@@ -29,6 +29,15 @@ export const money = (label = "Montant") =>
     return m ?? 0;
   });
 
+/** Montant facultatif : vide → null. */
+export const optMoney = (label = "Montant") =>
+  z.string().trim().optional().transform((v, ctx) => {
+    if (!v) return null;
+    const m = parseMoney(v);
+    if (m === null) ctx.addIssue({ code: "custom", message: `${label} invalide (ex. 45,500)` });
+    return m;
+  });
+
 export const day = (label = "Date") => req(label).regex(/^\d{4}-\d{2}-\d{2}$/, `${label} invalide`);
 const optDay = opt.refine((v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v), "Date invalide");
 const int = (label: string, min = 0, max = 1_000_000) => z.coerce.number({ invalid_type_error: `${label} invalide` }).int().min(min).max(max);
@@ -71,7 +80,15 @@ export const enrollmentSchema = z.object({
   startDate: day("Date d'entrée"),
   discountTypeId: opt, // uniquement une réduction autorisée (configurée dans Paramètres)
   discountNote: opt,
+  plan: z.enum(["MENSUEL", "TRIMESTRIEL", "ANNUEL"]).default("MENSUEL"),
   chargeRegistration: z.coerce.boolean().default(false),
+});
+
+export const termsSchema = z.object({
+  monthlyFee: money("Mensualité"),
+  plan: z.enum(["MENSUEL", "TRIMESTRIEL", "ANNUEL"]),
+  fromPeriod: req("Mois d'effet").regex(/^\d{4}-\d{2}$/, "Mois invalide"),
+  reason: req("Motif").min(3, "Motif trop court"),
 });
 
 export const teacherSchema = z.object({
@@ -79,7 +96,7 @@ export const teacherSchema = z.object({
   lastName: req("Nom"),
   phone: phone(),
   email: opt.refine((v) => !v || z.string().email().safeParse(v).success, "E-mail invalide"),
-  payMode: z.enum(["HORAIRE", "MENSUEL", "POURCENTAGE"]),
+  payMode: z.enum(["HORAIRE", "MENSUEL", "POURCENTAGE", "PAR_SEANCE"]),
   payRate: req("Taux"),
   subjectIds: z.array(z.string()).default([]),
   cycleIds: z.array(z.string()).default([]),
@@ -123,8 +140,9 @@ export const groupSchema = z.object({
   teacherId: opt,
   roomId: opt,
   capacity: int("Capacité", 1, 200),
-  monthlyFee: money("Mensualité"),
-  registrationFee: money("Frais d'inscription"),
+  // vides → tarif de la grille tarifaire de l'année
+  monthlyFee: optMoney("Mensualité"),
+  registrationFee: optMoney("Frais d'inscription"),
 });
 
 export const slotSchema = z
@@ -141,7 +159,7 @@ export const slotSchema = z
 export const paymentSchema = z.object({
   studentId: req("Élève"),
   amount: money(),
-  method: z.enum(["ESPECES", "CHEQUE", "VIREMENT", "D17"]),
+  modeId: req("Moyen de paiement"),
   reference: opt,
   paidAt: day("Date"),
   note: opt,
@@ -152,8 +170,28 @@ export const expenseSchema = z.object({
   categoryId: req("Catégorie"),
   label: req("Libellé"),
   amount: money(),
-  method: z.enum(["ESPECES", "CHEQUE", "VIREMENT", "D17"]),
+  modeId: req("Moyen de paiement"),
+  reference: opt,
   spentAt: day("Date"),
+});
+
+export const feeRuleSchema = z.object({
+  cycleId: opt,
+  levelId: opt,
+  subjectId: opt,
+  monthlyFee: money("Mensualité"),
+  registrationFee: optMoney("Frais d'inscription"),
+});
+
+export const paymentModeSchema = z.object({
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9_]{2,20}$/, "Code : 2 à 20 lettres majuscules/chiffres"),
+  label: req("Libellé"),
+  requiresReference: z.coerce.boolean().default(false),
+});
+
+export const templateSchema = z.object({
+  name: req("Nom"),
+  body: req("Texte").max(1000, "1000 caractères maximum"),
 });
 
 export const schoolYearSchema = z.object({

@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { studentInvoices } from "@/server/services/finance";
 import { formatDate, formatMoney, formatPeriod, todayISO } from "@/lib/format";
 import { PaymentForm } from "./payment-form";
+import { paymentModes, modeOptions } from "@/server/modes";
 
 export const metadata = { title: "Encaisser" };
 
@@ -53,11 +54,12 @@ export default async function NewPayment({ searchParams }: { searchParams: Promi
           <p className="text-sm text-muted">Aucune échéance à régler pour cet élève sur l&apos;année {year?.label}. Vérifiez ses inscriptions.</p>
         ) : (
           <PaymentForm
+            modes={modeOptions(await paymentModes())}
             studentId={student.id}
             today={todayISO()}
             invoices={invoices.map((i) => ({
               id: i.id,
-              label: `${formatPeriod(i.period)} — ${i.enrollment.group.name}`,
+              label: `${formatPeriod(i.period)}${i.months > 1 ? ` (+${i.months - 1} mois)` : ""} — ${i.enrollment.group.name}`,
               due: formatDate(i.dueDate),
               remaining: i.remaining,
               late: i.status === "EN_RETARD",

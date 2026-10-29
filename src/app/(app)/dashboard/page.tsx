@@ -5,6 +5,7 @@ import { requireUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { groupScope, studentScope } from "@/server/scope";
 import { unpaidSummary } from "@/server/services/finance";
+import { visibleWhere } from "@/server/services/notifications";
 import { can } from "@/lib/permissions";
 import { formatDate, formatDateTime, formatMinutes, formatMoney, todayISO, parseDay } from "@/lib/format";
 
@@ -38,6 +39,22 @@ export default async function Dashboard() {
   const gScope = groupScope(user);
   const since = new Date(todayDate.getTime() - 56 * 86400_000);
 
+  const since30 = new Date(todayDate.getTime() - 30 * 86400_000);
+  const [newEnrollments, recentAbsences, todo] = await Promise.all([
+    db.enrollment.count({ where: { createdAt: { gte: since30 }, group: { schoolYearId: year.id, ...gScope } } }),
+    can(user.role, "attendance.read")
+      ? db.attendanceRecord.findMany({
+          where: { status: { in: ["ABSENT", "EXCUSE"] }, session: { date: { gte: new Date(todayDate.getTime() - 7 * 86400_000) }, group: { schoolYearId: year.id, ...gScope } } },
+          include: { student: true, session: { include: { group: true } } }, orderBy: { session: { date: "desc" } }, take: 8,
+        })
+      : [],
+    Promise.all([
+      db.notification.count({ where: { ...visibleWhere(user), status: "NOUVELLE" } }),
+      can(user.role, "messages.write") ? db.message.count({ where: { status: "PREPARE" } }) : 0,
+      can(user.role, "expenses.read") ? db.expense.count({ where: { cancelledAt: null, schoolYearId: year.id, attachments: { none: {} }, teacherPayId: null } }) : 0,
+      can(user.role, "students.write") ? db.student.count({ where: { status: "PREINSCRIT" } }) : 0,
+    ]),
+  ]);
   const [activeStudents, enrollments, slotsToday, attRecords, groups, activity] = await Promise.all([
     db.student.count({ where: { status: "ACTIF", ...studentScope(user) } }),
     db.enrollment.count({ where: { status: "ACTIVE", group: { schoolYearId: year.id, ...gScope } } }),
@@ -86,11 +103,11 @@ export default async function Dashboard() {
   if (finance) {
     const [cashed, spent, unpaid, recent, payments, expenses] = await Promise.all([
       db.payment.aggregate({ _sum: { amount: true }, where: { cancelledAt: null, paidAt: { gte: monthStart } } }),
-      db.expense.aggregate({ _sum: { amount: true }, where: { spentAt: { gte: monthStart } } }),
+      db.expense.aggregate({ _sum: { amount: true }, where: { cancelledAt: null, spentAt: { gte: monthStart } } }),
       unpaidSummary(year.id),
       db.payment.findMany({ where: { cancelledAt: null }, orderBy: { createdAt: "desc" }, take: 6, include: { student: true } }),
       db.payment.findMany({ where: { schoolYearId: year.id, cancelledAt: null }, select: { amount: true, paidAt: true } }),
-      db.expense.findMany({ where: { schoolYearId: year.id }, select: { amount: true, spentAt: true } }),
+      db.expense.findMany({ where: { schoolYearId: year.id, cancelledAt: null }, select: { amount: true, spentAt: true } }),
     ]);
     const key = (d: Date) => d.toISOString().slice(0, 7);
     const monthly = year.billingMonths.filter((m) => m <= today.slice(0, 7)).map((m) => ({
@@ -115,9 +132,10 @@ export default async function Dashboard() {
         </>}
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={user.role === "ENSEIGNANT" ? "Mes élèves" : "Élèves actifs"} value={activeStudents} hint={`${enrollments} inscription(s) en cours · ${groups.length} groupe(s)`} />
+        <Stat label={user.role === "ENSEIGNANT" ? "Mes élèves" : "Élèves actifs"} value={activeStudents} hint={`${enrollments} inscription(s) en cours · ${newEnrollments} nouvelle(s) sur 30 jours`} />
         {can(user.role, "attendance.read") && <Stat label="Présence (8 semaines)" value={attTotal ? `${Math.round((attOk / attTotal) * 100)} %` : "—"} hint={`${attTotal} pointage(s)`} />}
         {fin && <Stat label="Encaissé ce mois" tone="green" value={formatMoney(fin.cashed)} hint={`Dépenses du mois : ${formatMoney(fin.spent)}`} />}
+        {!fin && <Stat label="Nouvelles inscriptions" value={newEnrollments} hint="sur les 30 derniers jours" />}
         {fin && <Stat label="Impayés échus" tone="brand" value={formatMoney(fin.unpaid.reduce((s, u) => s + u.due, 0))} hint={`${fin.unpaid.length} élève(s) concerné(s)`} />}
       </div>
 
@@ -139,6 +157,29 @@ export default async function Dashboard() {
           <Card title="Taux de présence hebdomadaire" className={fin ? "xl:col-span-2" : "xl:col-span-2"}>
             {attTotal ? <BarChart data={weeks.map((w) => ({ label: w.label, values: w.values }))} series={[{ name: "Présence" }]} unit="percent" height={180} caption="Taux de présence par semaine, en pourcentage" />
               : <p className="text-sm text-muted">Aucun appel enregistré sur les 8 dernières semaines.</p>}
+          </Card>
+        )}
+        <Card title="À traiter">
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between"><Link href="/notifications" className="hover:text-brand">Notifications non lues</Link><Badge tone={todo[0] ? "red" : "green"}>{todo[0]}</Badge></li>
+            {can(user.role, "messages.write") && <li className="flex justify-between"><Link href="/messages" className="hover:text-brand">Messages préparés à envoyer</Link><Badge tone={todo[1] ? "amber" : "green"}>{todo[1]}</Badge></li>}
+            {can(user.role, "expenses.read") && <li className="flex justify-between"><Link href="/expenses?state=nodoc" className="hover:text-brand">Dépenses sans justificatif</Link><Badge tone={todo[2] ? "amber" : "green"}>{todo[2]}</Badge></li>}
+            {can(user.role, "students.write") && <li className="flex justify-between"><Link href="/students?status=PREINSCRIT" className="hover:text-brand">Pré-inscriptions à finaliser</Link><Badge tone={todo[3] ? "blue" : "green"}>{todo[3]}</Badge></li>}
+          </ul>
+        </Card>
+        {can(user.role, "attendance.read") && (
+          <Card title="Absences récentes (7 jours)" actions={<Link href="/attendance" className="text-xs text-brand">Présences</Link>}>
+            {recentAbsences.length === 0 ? <p className="text-sm text-muted">Aucune absence.</p> : (
+              <ul className="divide-y divide-line text-sm">
+                {recentAbsences.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-2 py-1.5">
+                    <Link href={`/students/${a.studentId}`} className="truncate hover:text-brand">{a.student.lastName} {a.student.firstName}</Link>
+                    <span className="text-xs text-muted">{formatDate(a.session.date)} · {a.session.group.name}</span>
+                    <Badge tone={a.status === "EXCUSE" ? "blue" : a.note ? "amber" : "red"}>{a.status === "EXCUSE" ? "excusé" : a.note ? "motif" : "à justifier"}</Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         )}
         <Card title="Séances du jour" actions={can(user.role, "attendance.read") && <Link href="/attendance" className="text-xs text-brand">Appels</Link>}>

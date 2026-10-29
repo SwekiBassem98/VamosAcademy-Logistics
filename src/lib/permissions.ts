@@ -18,6 +18,8 @@ export const PERMISSIONS = [
   "expenses.read",
   "expenses.write",
   "reports.read",
+  "payroll.manage",
+  "messages.write",
   "users.manage",
   "settings.manage",
   "audit.read",
@@ -31,11 +33,11 @@ const MATRIX: Record<Role, readonly Permission[]> = {
   RESPONSABLE: [
     "dashboard.finance", "students.read", "students.write", "academics.read", "academics.write",
     "teachers.read", "teachers.write", "attendance.read", "attendance.write", "grades.read",
-    "payments.read", "payments.write", "audit.read",
+    "payments.read", "payments.write", "messages.write", "audit.read",
   ],
   COMPTABLE: [
     "dashboard.finance", "students.read", "teachers.read", "payments.read", "payments.write",
-    "payments.cancel", "expenses.read", "expenses.write", "reports.read",
+    "payments.cancel", "expenses.read", "expenses.write", "reports.read", "payroll.manage", "messages.write",
   ],
   // Limité à ses groupes (cf. src/server/scope.ts)
   ENSEIGNANT: ["students.read", "academics.read", "attendance.read", "attendance.write", "grades.read", "grades.write"],

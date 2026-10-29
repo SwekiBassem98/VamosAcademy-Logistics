@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Users, UserRound, GraduationCap, Layers, CalendarDays, ClipboardCheck, Wallet,
-  AlertTriangle, Receipt, BarChart3, Settings, ShieldCheck, History, X, NotebookPen, DoorOpen,
+  AlertTriangle, Receipt, BarChart3, Settings, ShieldCheck, History, X, NotebookPen, DoorOpen, HandCoins, Bell, MessageSquareText, Printer,
 } from "lucide-react";
 import clsx from "clsx";
 import { Topbar, type Notice } from "./topbar";
@@ -15,6 +15,7 @@ const ICONS = {
   dashboard: LayoutDashboard, students: Users, guardians: UserRound, teachers: GraduationCap, academics: Layers,
   schedule: CalendarDays, attendance: ClipboardCheck, grades: NotebookPen, rooms: DoorOpen, payments: Wallet,
   unpaid: AlertTriangle, expenses: Receipt, reports: BarChart3, settings: Settings, users: ShieldCheck, audit: History,
+  payroll: HandCoins, bell: Bell, messages: MessageSquareText, documents: Printer,
 };
 export type NavItem = { href: string; label: string; icon: keyof typeof ICONS; section: string };
 
@@ -54,11 +55,12 @@ function Nav({ items, onNavigate, onClose }: { items: NavItem[]; onNavigate?: ()
   );
 }
 
-export function AppShell({ items, user, yearLabel, notices, logout, children }: {
+export function AppShell({ items, user, yearLabel, notices, unread, logout, children }: {
   items: NavItem[];
   user: { fullName: string; role: string; email: string };
   yearLabel: string | null;
   notices: Notice[];
+  unread: number;
   logout: () => Promise<void>;
   children: ReactNode;
 }) {
@@ -75,7 +77,7 @@ export function AppShell({ items, user, yearLabel, notices, logout, children }: 
         </div>
       )}
       <div className="lg:pl-64 print:pl-0">
-        <Topbar user={user} yearLabel={yearLabel} notices={notices} logout={logout} onMenu={() => setOpen(true)} />
+        <Topbar user={user} yearLabel={yearLabel} notices={notices} unread={unread} logout={logout} onMenu={() => setOpen(true)} />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 print:p-0">{children}</main>
       </div>
     </div>

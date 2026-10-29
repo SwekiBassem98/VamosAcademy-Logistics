@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Prisma, StudentStatus } from "@prisma/client";
 import { PageHeader, Table, Td, Badge, LinkButton, Forbidden, DemoBadge, EmptyState } from "@/components/ui";
 import { SortLink, Pagination, FilterBar, listParams, type Params } from "@/components/table-tools";
+import { Bulk, SelectAll, SelectRow } from "@/components/bulk";
+import { PersistFilters } from "@/components/persist-filters";
+import { archiveStudents } from "./actions";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { studentScope } from "@/server/scope";
@@ -54,7 +57,10 @@ export default async function Students({ searchParams }: { searchParams: Promise
   ]);
   const balances = finance && year ? await studentBalances(students.map((s) => s.id), year.id) : null;
   const base = "/students";
+  const write = can(user.role, "students.write");
+  const msgTemplate = can(user.role, "messages.write") ? await db.messageTemplate.findFirst({ where: { code: "BIENVENUE", active: true } }) : null;
   const head = [
+    ...(write ? [<SelectAll key="sel" />] : []),
     <SortLink key="c" base={base} params={params} field="code" label="Matricule" />,
     <SortLink key="n" base={base} params={params} field="lastName" label="Élève" />,
     <SortLink key="l" base={base} params={params} field="level" label="Niveau" />,
@@ -74,6 +80,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
           <LinkButton href="/students/new">Nouvel élève</LinkButton>
         </>}
       />
+      <PersistFilters storageKey="students" />
       <FilterBar params={params}>
         <input name="q" defaultValue={q} placeholder="Nom, matricule, téléphone…" className="input w-full sm:w-64" aria-label="Rechercher" />
         <select name="level" defaultValue={level} className="input w-full sm:w-56" aria-label="Niveau">
@@ -94,12 +101,20 @@ export default async function Students({ searchParams }: { searchParams: Promise
           action={can(user.role, "students.write") && <LinkButton href="/students/new">Nouvel élève</LinkButton>} />
       ) : (
         <>
+          <Bulk noun="élève(s)"
+            links={write ? [
+              { label: "Exporter (CSV)", href: "/api/export/students" },
+              { label: "Exporter (Excel)", href: "/api/export/students?format=xlsx" },
+              ...(msgTemplate ? [{ label: "Message aux parents", href: "/messages/new" }] : []),
+            ] : []}
+            actions={write ? [{ label: "Archiver", action: archiveStudents, title: "Archiver les dossiers sélectionnés ?", message: "Les inscriptions en cours seront terminées et les mensualités futures non payées annulées ; l'historique est conservé", withReason: "Motif", variant: "danger" }] : []}>
           <Table head={head} empty={students.length === 0}>
             {students.map((s) => {
               const b = balances?.get(s.id);
               const g = s.guardians[0]?.guardian;
               return (
                 <tr key={s.id} className="hover:bg-gray-50">
+                  {write && <Td><SelectRow id={s.id} label={`${s.lastName} ${s.firstName}`} /></Td>}
                   <Td className="font-mono text-xs text-muted">{s.code}</Td>
                   <Td>
                     <Link href={`/students/${s.id}`} className="font-medium text-navy hover:text-brand">{s.lastName} {s.firstName}</Link>
@@ -116,6 +131,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
               );
             })}
           </Table>
+          </Bulk>
           <Pagination base={base} params={params} page={page} total={total} perPage={PER} />
         </>
       )}

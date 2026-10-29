@@ -17,10 +17,11 @@ function useOutside(ref: React.RefObject<HTMLElement | null>, close: () => void)
   }, [ref, close]);
 }
 
-export function Topbar({ user, yearLabel, notices, logout, onMenu }: {
+export function Topbar({ user, yearLabel, notices, unread, logout, onMenu }: {
   user: { fullName: string; role: string; email: string };
   yearLabel: string | null;
   notices: Notice[];
+  unread: number;
   logout: () => Promise<void>;
   onMenu?: () => void;
 }) {
@@ -45,14 +46,14 @@ export function Topbar({ user, yearLabel, notices, logout, onMenu }: {
       </span>
 
       <div className="relative" ref={nRef}>
-        <button onClick={() => setOpenN((v) => !v)} className="relative rounded-full p-2 text-navy hover:bg-gray-100" aria-label={`Notifications (${notices.length})`} aria-expanded={openN}>
+        <button onClick={() => setOpenN((v) => !v)} className="relative rounded-full p-2 text-navy hover:bg-gray-100" aria-label={`Notifications (${unread} nouvelle(s))`} aria-expanded={openN}>
           <Bell className="size-5" />
-          {notices.length > 0 && <span className="absolute right-1 top-1 grid size-4 place-items-center rounded-full bg-brand text-[10px] font-bold text-white">{notices.length}</span>}
+          {unread > 0 && <span className="absolute right-0.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
         </button>
         {openN && (
           <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-lg border border-line bg-white shadow-lg">
-            <p className="border-b border-line px-4 py-2 text-sm font-semibold text-navy">Notifications</p>
-            {notices.length === 0 ? <p className="px-4 py-6 text-center text-sm text-muted">Tout est à jour.</p> : (
+            <p className="flex items-center justify-between border-b border-line px-4 py-2 text-sm font-semibold text-navy">Notifications <span className="text-xs font-normal text-muted">{unread} nouvelle(s)</span></p>
+            {notices.length === 0 ? <p className="px-4 py-6 text-center text-sm text-muted">Aucune nouvelle notification.</p> : (
               <ul className="max-h-96 divide-y divide-line overflow-y-auto">
                 {notices.map((n) => (
                   <li key={n.id}>
@@ -64,6 +65,7 @@ export function Topbar({ user, yearLabel, notices, logout, onMenu }: {
                 ))}
               </ul>
             )}
+            <Link href="/notifications" onClick={() => setOpenN(false)} className="block border-t border-line px-4 py-2 text-center text-xs font-medium text-brand hover:bg-gray-50">Voir toutes les notifications et leur traitement</Link>
           </div>
         )}
       </div>

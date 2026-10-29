@@ -19,8 +19,8 @@ export async function GroupFields({ g }: { g?: Group }) {
       <Select label="Enseignant" name="teacherId" placeholder="—" defaultValue={g?.teacherId ?? ""} options={teachers.map((t) => ({ value: t.id, label: `${t.lastName} ${t.firstName}` }))} />
       <Select label="Salle par défaut" name="roomId" placeholder="—" defaultValue={g?.roomId ?? ""} options={rooms.map((r) => ({ value: r.id, label: `${r.name} (${r.capacity} pl.)` }))} />
       <Input label="Capacité *" name="capacity" type="number" min={1} defaultValue={g?.capacity ?? 12} />
-      <Input label="Mensualité (DT) *" name="monthlyFee" inputMode="decimal" placeholder="50,000" defaultValue={g ? moneyInput(g.monthlyFee) : ""} />
-      <Input label="Frais d'inscription (DT)" name="registrationFee" inputMode="decimal" defaultValue={g ? moneyInput(g.registrationFee) : "0"} />
+      <Input label="Mensualité (DT)" name="monthlyFee" inputMode="decimal" placeholder="selon la grille" defaultValue={g ? moneyInput(g.monthlyFee) : ""} hint={g ? undefined : "Vide : tarif de la grille tarifaire"} />
+      <Input label="Frais d'inscription (DT)" name="registrationFee" inputMode="decimal" placeholder="selon la grille" defaultValue={g ? moneyInput(g.registrationFee) : ""} />
     </div>
   );
 }

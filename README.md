@@ -25,15 +25,25 @@ npm run dev                          # http://localhost:3000
 | Commande | Rôle |
 |---|---|
 | `npm run dev` / `build` / `start` | Développement (dossier `.next-dev`) / build / production (dossier `.next`) |
-| `npm test` | 56 tests : unitaires + intégration (base `TEST_DATABASE_URL`, nom obligatoirement en `*_test`, vidée à chaque exécution) |
+| `npm test` | 71 tests : unitaires + intégration (base `TEST_DATABASE_URL`, nom obligatoirement en `*_test`, vidée à chaque exécution) |
 | `npm run typecheck` · `npm run lint` | Vérifications statiques |
 | `npx prisma migrate deploy` | Applique les migrations |
 | `./scripts/backup.sh` | Sauvegarde `pg_dump` compressée avec rotation |
+
+## Configuration
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` | PostgreSQL |
+| `STORAGE_DIR` | Dossier des justificatifs de dépenses (défaut `./storage`, hors `public/`) — **à inclure dans les sauvegardes** |
+| `SEED_ADMIN_PASSWORD` | Mot de passe initial de l'administrateur (seed) |
+
+Aucun service d'envoi (SMS, WhatsApp, e-mail) n'est branché : les messages sont préparés puis envoyés par l'équipe.
 
 ## Conventions
 
 - Interface en français, fuseau `Africa/Tunis`, montants **en millimes** en base (`45,500 DT` = `45500`). Une échéance n'est « en retard » qu'une fois son jour écoulé (heure de Tunis).
 - Couches : pages (`src/app`) → Server Actions (`actions.ts` : permission + Zod) → services (`src/server/services`) → Prisma. Permissions vérifiées **côté serveur** ; l'enseignant est restreint à ses groupes (`src/server/scope.ts`).
 - Toute action sensible est tracée dans `AuditLog` ; les modifications de dossier élève sont historisées champ par champ.
-- Les paiements ne sont jamais supprimés : ils sont annulés avec motif. Les élèves sont archivés, pas supprimés.
+- Aucune opération financière n'est supprimée : paiements, dépenses, échéances et rémunérations sont **annulés ou corrigés** avec motif, l'original restant consultable. Les élèves sont archivés, pas supprimés.
 - Le logo (`public/brand/logo.png`) est extrait d'une capture basse résolution : **remplacer par le fichier officiel HD/SVG**.
