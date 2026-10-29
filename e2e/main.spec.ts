@@ -18,7 +18,7 @@ test("connexion : erreur claire puis accès au tableau de bord", async ({ page }
   await page.getByLabel("Mot de passe", { exact: true }).fill(ADMIN.password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { name: /Bonjour/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Bonjour|Bonsoir/ })).toBeVisible();
   await expect(page.getByText("Données de démonstration présentes")).toBeVisible();
 });
 
@@ -132,4 +132,48 @@ test("affichage mobile sans débordement horizontal", async ({ browser }) => {
   await page.getByRole("button", { name: "Ouvrir le menu" }).click();
   await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
   await page.close();
+});
+
+test("dépense : photo de justificatif allégée avant l'envoi, stockée en base et consultable", async ({ page }) => {
+  await login(page, ADMIN.email, ADMIN.password);
+  await page.goto("/expenses");
+  // Photo « de téléphone » trop lourde pour un envoi (PNG de bruit 2400 × 2400, > 4 Mo)
+  const photo = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 2400;
+    const ctx = c.getContext("2d")!;
+    const img = ctx.createImageData(2400, 2400);
+    for (let i = 0; i < img.data.length; i++) img.data[i] = i % 4 === 3 ? 255 : Math.random() * 255;
+    ctx.putImageData(img, 0, 0);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  const big = Buffer.from(photo, "base64");
+  expect(big.length).toBeGreaterThan(4 * 1024 * 1024);
+
+  await page.getByRole("button", { name: "Nouvelle dépense" }).click();
+  const sheet = page.getByRole("dialog", { name: "Nouvelle dépense" });
+  await sheet.getByLabel("Catégorie *").selectOption({ index: 1 });
+  await sheet.getByLabel("Libellé *").fill("Ramettes de papier E2E");
+  await sheet.getByLabel("Montant (DT) *").fill("23,500");
+
+  // Un PDF trop lourd est refusé avant l'envoi, sans perdre la saisie
+  await sheet.getByLabel(/Justificatifs/).setInputFiles({ name: "gros.pdf", mimeType: "application/pdf", buffer: Buffer.concat([Buffer.from("%PDF-1.4\n"), Buffer.alloc(5 * 1024 * 1024)]) });
+  await sheet.getByRole("button", { name: "Enregistrer la dépense" }).click();
+  await expect(sheet.locator('p[role="alert"]')).toContainText("4 Mo au total");
+  await expect(sheet.getByLabel("Libellé *")).toHaveValue("Ramettes de papier E2E");
+
+  await sheet.getByLabel(/Justificatifs/).setInputFiles({ name: "ticket.png", mimeType: "image/png", buffer: big });
+  await sheet.getByRole("button", { name: "Enregistrer la dépense" }).click();
+  await expect(sheet.getByRole("status")).toContainText("Dépense enregistrée avec justificatif");
+
+  await page.goto("/expenses");
+  await page.getByRole("link", { name: "Ramettes de papier E2E" }).first().click();
+  const link = page.getByRole("link", { name: "ticket.jpg" });
+  await expect(link).toBeVisible();
+  const res = await page.request.get((await link.getAttribute("href"))!);
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toBe("image/jpeg");
+  const body = await res.body();
+  expect(body.length).toBeLessThan(4 * 1024 * 1024);
+  expect(body.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))).toBe(true);
 });

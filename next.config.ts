@@ -30,8 +30,10 @@ const nextConfig: NextConfig = {
   // `npm run dev` utilise son propre dossier : un build de production (.next) ne peut pas polluer le serveur de dev.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
-  // justificatifs de dépenses : jusqu'à 3 fichiers de 5 Mo par envoi
-  experimental: { serverActions: { bodySizeLimit: "16mb" } },
+  // justificatifs de dépenses : 4 Mo au total par envoi (src/lib/uploads.ts), sous la limite de 4,5 Mo de Vercel
+  experimental: { serverActions: { bodySizeLimit: "5mb" }, proxyClientMaxBodySize: "5mb" },
+  // logo lu sur disque par la génération des reçus PDF : à embarquer dans la fonction serverless
+  outputFileTracingIncludes: { "/api/receipts/[id]/pdf": ["./public/brand/logo.png"] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

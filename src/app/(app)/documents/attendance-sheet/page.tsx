@@ -42,8 +42,8 @@ export default async function AttendanceSheet({ searchParams }: { searchParams: 
 
   return (
     <>
-      <div className="no-print mx-auto mb-4 flex max-w-5xl justify-between">
-        <Link href="/documents" className="text-sm text-muted hover:text-brand">← Documents</Link><PrintButton />
+      <div className="no-print mx-auto mb-4 flex max-w-5xl flex-wrap items-center justify-between gap-2">
+        <Link href="/documents" className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Documents</Link><PrintButton />
       </div>
       <DocPage wide>
         <DocHeader title="Feuille de présence" reference={g.name} lines={[`${MONTHS[m - 1]} ${y}`, g.teacher ? `${g.teacher.lastName} ${g.teacher.firstName}` : "", g.slots.map((s) => `${WEEKDAYS[s.weekday]} ${formatMinutes(s.startMin)}`).join(" · ")]} />

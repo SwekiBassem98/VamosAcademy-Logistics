@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, PageHeader, Forbidden, Badge, DemoBadge } from "@/components/ui";
+import { Card, PageHeader, Forbidden, Badge, DemoBadge, Phone } from "@/components/ui";
+import { Sheet } from "@/components/sheet";
 import { Form, Input, Select, Submit } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { pageUser } from "@/server/auth";
@@ -9,6 +10,9 @@ import { can } from "@/lib/permissions";
 import { formatMinutes, WEEKDAYS } from "@/lib/format";
 import { TeacherForm, payLabel } from "../teacher-form";
 import { addAvailability, deleteAvailability } from "../actions";
+
+
+export const metadata = { title: "Enseignant" };
 
 export default async function TeacherPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser("teachers.read");
@@ -33,22 +37,23 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <PageHeader title={`${t.lastName} ${t.firstName}`}
-        subtitle={<>{t.phone}{t.email && ` · ${t.email}`} · {write ? payLabel(t) : ""}</>} />
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Badge tone={t.active ? "green" : "gray"}>{t.active ? "actif" : "inactif"}</Badge>
-        {t.isDemo && <DemoBadge />}
-        {t.subjects.map((s) => <Badge key={s.subjectId} tone="blue">{s.subject.name}</Badge>)}
-        {t.cycles.map((c) => <Badge key={c.cycleId}>{c.cycle.name}</Badge>)}
-        <Badge tone="amber">{(weeklyMin / 60).toLocaleString("fr-FR")} h / semaine</Badge>
-      </div>
+      <PageHeader back={{ href: "/teachers", label: "Enseignants" }} title={`${t.lastName} ${t.firstName}`}
+        subtitle={<><Phone value={t.phone} />{t.email && ` · ${t.email}`}{write && ` · ${payLabel(t)}`}</>}
+        meta={<>
+          <Badge tone={t.active ? "green" : "gray"} dot>{t.active ? "actif" : "inactif"}</Badge>
+          {t.isDemo && <DemoBadge />}
+          {t.subjects.map((s) => <Badge key={s.subjectId} tone="blue">{s.subject.name}</Badge>)}
+          {t.cycles.map((c) => <Badge key={c.cycleId}>{c.cycle.name}</Badge>)}
+          <Badge tone="amber">{(weeklyMin / 60).toLocaleString("fr-FR")} h / semaine</Badge>
+        </>}
+        actions={write && <Sheet trigger="Modifier la fiche" variant="secondary" title="Modifier la fiche"><TeacherForm t={t} /></Sheet>} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card title="Groupes affectés (année active)">
             {t.groups.length === 0 ? <p className="text-sm text-muted">Aucun groupe. L&apos;affectation se fait dans la fiche du groupe.</p> : (
               <ul className="divide-y divide-line text-sm">
                 {t.groups.map((g) => (
-                  <li key={g.id} className="flex items-center justify-between py-2">
+                  <li key={g.id} className="flex flex-wrap items-center justify-between gap-x-3 py-2.5">
                     {can(user.role, "academics.read") ? <Link href={`/academics/groups/${g.id}`} className="font-medium hover:text-brand">{g.name}</Link> : <span className="font-medium">{g.name}</span>}
                     <span className="text-muted">{g.subject.name} · {g.level.name} · {g._count.enrollments}/{g.capacity} élèves</span>
                   </li>
@@ -59,11 +64,10 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
           <Card title="Emploi du temps hebdomadaire">
             {slots.length === 0 ? <p className="text-sm text-muted">Aucun créneau.</p> : (
               <ul className="space-y-1 text-sm">
-                {slots.map((s) => <li key={s.id}><strong className="inline-block w-24">{WEEKDAYS[s.weekday]}</strong>{formatMinutes(s.startMin)}–{formatMinutes(s.endMin)} · {s.group.name} · {s.room.name}</li>)}
+                {slots.map((s) => <li key={s.id} className="flex gap-3"><strong className="w-20 shrink-0">{WEEKDAYS[s.weekday]}</strong><span><span className="font-semibold tabular-nums">{formatMinutes(s.startMin)}–{formatMinutes(s.endMin)}</span> · {s.group.name} · {s.room.name}</span></li>)}
               </ul>
             )}
           </Card>
-          {write && <Card title="Modifier la fiche"><TeacherForm t={t} /></Card>}
         </div>
         <Card title="Disponibilités">
           <p className="mb-3 text-xs text-muted">Si des disponibilités sont déclarées, aucun cours ne peut être programmé en dehors.</p>

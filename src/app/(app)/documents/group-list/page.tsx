@@ -24,8 +24,8 @@ export default async function GroupList({ searchParams }: { searchParams: Promis
   if (!g) return <Forbidden />;
   return (
     <>
-      <div className="no-print mx-auto mb-4 flex max-w-3xl justify-between">
-        <Link href="/documents" className="text-sm text-muted hover:text-brand">← Documents</Link>
+      <div className="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
+        <Link href="/documents" className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Documents</Link>
         <div className="flex gap-2"><LinkButton variant="secondary" prefetch={false} href={`/api/export/group?id=${g.id}&format=xlsx`}>Excel</LinkButton><PrintButton /></div>
       </div>
       <DocPage>

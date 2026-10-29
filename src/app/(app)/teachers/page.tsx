@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { Card, PageHeader, Table, Td, Badge, Forbidden, DemoBadge } from "@/components/ui";
+import { UserPlus } from "lucide-react";
+import { PageHeader, Table, Td, Badge, Forbidden, DemoBadge, Phone } from "@/components/ui";
+import { Sheet } from "@/components/sheet";
 import { SortLink, FilterBar, listParams, Pagination, type Params } from "@/components/table-tools";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
@@ -32,24 +34,25 @@ export default async function Teachers({ searchParams }: { searchParams: Promise
   const base = "/teachers";
   return (
     <>
-      <PageHeader title="Enseignants" subtitle={`${total} enseignant(s)`} />
-      <FilterBar params={params}>
-        <input name="q" defaultValue={q} placeholder="Nom ou téléphone…" className="input w-full sm:w-60" aria-label="Rechercher" />
-        <select name="subject" defaultValue={subject} className="input w-full sm:w-56" aria-label="Matière">
+      <PageHeader title="Enseignants" subtitle={`${total} enseignant(s)`}
+        primary={can(user.role, "teachers.write") && <Sheet trigger={<><UserPlus /> Nouvel enseignant</>} title="Nouvel enseignant"><TeacherForm /></Sheet>} />
+      <FilterBar params={params}
+        search={<input name="q" type="search" defaultValue={q} placeholder="Nom ou téléphone…" className="input" aria-label="Rechercher un enseignant" />}>
+        <select name="subject" defaultValue={subject} className="input md:w-56" aria-label="Matière">
           <option value="">Toutes matières</option>
           {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <select name="active" defaultValue={active} className="input w-full sm:w-40" aria-label="Statut">
+        <select name="active" defaultValue={active} className="input md:w-40" aria-label="Statut">
           <option value="1">Actifs</option><option value="0">Inactifs</option><option value="all">Tous</option>
         </select>
       </FilterBar>
-      <Table head={[<SortLink key="n" base={base} params={params} field="lastName" label="Nom" />, "Téléphone", "Matières", "Niveaux", "Groupes", "Disponibilités", "Rémunération", "Statut"]} empty={teachers.length === 0}>
+      <Table head={[<SortLink key="n" base={base} params={params} field="lastName" label="Nom" />, "Téléphone", "Matières", "Niveaux", "Groupes", "Disponibilités", "Rémunération", "Statut"]} empty={teachers.length === 0} emptyText="Aucun enseignant ne correspond." caption="Enseignants">
         {teachers.map((t) => (
-          <tr key={t.id} className="hover:bg-gray-50">
-            <Td><Link href={`/teachers/${t.id}`} className="font-medium text-navy hover:text-brand">{t.lastName} {t.firstName}</Link><DemoBadge show={t.isDemo} /></Td>
-            <Td><a href={`tel:${t.phone.replace(/\s/g, "")}`}>{t.phone}</a></Td>
-            <Td className="whitespace-normal">{t.subjects.map((s) => s.subject.name).join(", ") || "—"}</Td>
-            <Td className="whitespace-normal text-xs">{t.cycles.map((c) => c.cycle.name).join(", ") || "—"}</Td>
+          <tr key={t.id} className="transition hover:bg-surface">
+            <Td cell="primary"><Link href={`/teachers/${t.id}`} className="font-semibold text-navy hover:text-brand">{t.lastName} {t.firstName}</Link><DemoBadge show={t.isDemo} /></Td>
+            <Td><Phone value={t.phone} /></Td>
+            <Td cell="wide">{t.subjects.map((s) => s.subject.name).join(", ") || "—"}</Td>
+            <Td className="text-xs lg:whitespace-normal">{t.cycles.map((c) => c.cycle.name).join(", ") || "—"}</Td>
             <Td>{t._count.groups}</Td>
             <Td className="text-xs">{t.availability.length ? `${t.availability.length} plage(s)` : <span className="text-muted">non déclarées</span>}</Td>
             <Td className="text-xs">{can(user.role, "teachers.write") || can(user.role, "dashboard.finance") ? payLabel(t) : "—"}</Td>
@@ -58,9 +61,6 @@ export default async function Teachers({ searchParams }: { searchParams: Promise
         ))}
       </Table>
       <Pagination base={base} params={params} page={page} total={total} perPage={PER} />
-      {can(user.role, "teachers.write") && (
-        <Card title="Nouvel enseignant" className="mt-6"><TeacherForm /></Card>
-      )}
     </>
   );
 }

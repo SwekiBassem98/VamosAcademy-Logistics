@@ -35,10 +35,10 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
     <>
       <PageHeader title="Notifications" subtitle={`${count("NOUVELLE")} nouvelle(s) · ${count("LUE")} lue(s) en attente · ${count("TRAITEE")} traitée(s)`} />
       <FilterBar params={params} keep={[]}>
-        <select name="status" defaultValue={params.status ?? ""} className="input w-full sm:w-48" aria-label="Statut">
+        <select name="status" defaultValue={params.status ?? ""} className="input md:w-56" aria-label="Statut">
           <option value="">À traiter (nouvelles + lues)</option><option value="NOUVELLE">Nouvelles</option><option value="LUE">Lues</option><option value="TRAITEE">Traitées</option><option value="all">Toutes</option>
         </select>
-        <select name="type" defaultValue={params.type ?? ""} className="input w-full sm:w-52" aria-label="Type">
+        <select name="type" defaultValue={params.type ?? ""} className="input md:w-52" aria-label="Type">
           <option value="">Tous types</option>{Object.entries(TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
       </FilterBar>
@@ -47,18 +47,18 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
           { label: "Marquer lues", action: updateNotifications, title: "Marquer comme lues ?", message: "Les notifications restent dans la liste « à traiter »", fields: { status: "LUE" }, variant: "secondary" },
           { label: "Marquer traitées", action: updateNotifications, title: "Marquer comme traitées ?", message: "Elles sortiront de la liste à traiter (historique conservé)", fields: { status: "TRAITEE" }, withReason: "Note de traitement", variant: "primary" },
         ]}>
-          <Table head={[<SelectAll key="all" />, "Date", "Type", "Notification", "Statut", "Traitement"]}>
+          <Table head={[<SelectAll key="all" />, "Notification", "Date", "Type", "Statut", "Traitement"]} caption="Notifications">
             {list.map((n) => (
               <tr key={n.id} className={n.status === "NOUVELLE" ? "bg-brand-50/40" : ""}>
-                <Td><SelectRow id={n.id} label={n.title} /></Td>
+                <Td cell="select"><SelectRow id={n.id} label={n.title} /></Td>
+                <Td cell="primary" className="lg:whitespace-normal">
+                  {n.href ? <Link href={n.href} className="font-semibold text-navy hover:text-brand">{n.title}</Link> : <span className="font-semibold">{n.title}</span>}
+                  {n.body && <span className="block text-sm text-muted">{n.body}</span>}
+                </Td>
                 <Td className="text-xs text-muted">{formatDateTime(n.createdAt)}</Td>
                 <Td><Badge tone="gray">{TYPE_LABEL[n.type]}</Badge></Td>
-                <Td className="whitespace-normal">
-                  {n.href ? <Link href={n.href} className="font-medium text-navy hover:text-brand">{n.title}</Link> : <span className="font-medium">{n.title}</span>}
-                  {n.body && <span className="block text-xs text-muted">{n.body}</span>}
-                </Td>
-                <Td><Badge tone={STATUS_TONE[n.status]}>{STATUS_LABEL[n.status]}</Badge></Td>
-                <Td className="whitespace-normal text-xs text-muted">{n.handledAt ? `${formatDateTime(n.handledAt)}${n.handledNote ? ` — ${n.handledNote}` : ""}` : ""}</Td>
+                <Td><Badge tone={STATUS_TONE[n.status]} dot>{STATUS_LABEL[n.status]}</Badge></Td>
+                <Td cell="wide" className="text-xs text-muted">{n.handledAt ? `${formatDateTime(n.handledAt)}${n.handledNote ? ` — ${n.handledNote}` : ""}` : ""}</Td>
               </tr>
             ))}
           </Table>

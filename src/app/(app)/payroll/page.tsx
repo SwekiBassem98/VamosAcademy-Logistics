@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Card, PageHeader, Table, Td, Badge, Forbidden, Stat, LinkButton, EmptyState } from "@/components/ui";
+import { Card, PageHeader, Table, Td, Badge, Forbidden, Stat, LinkButton, EmptyState, ApplyButton } from "@/components/ui";
+import { FilterField } from "@/components/table-tools";
 import { Form, Input, Select, Submit } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { pageUser } from "@/server/auth";
@@ -42,46 +43,46 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
     <>
       <PageHeader title="Rémunérations des enseignants" subtitle="Calcul selon la modalité de chaque enseignant : à l'heure (séances pointées × durée du créneau), par séance, forfait mensuel ou pourcentage des mensualités encaissées sur ses groupes."
         actions={<>
-          <LinkButton variant="secondary" prefetch={false} href={`/api/export/payroll?period=${period}`}>CSV</LinkButton>
+          <LinkButton variant="secondary" prefetch={false} href={`/api/export/payroll?period=${period}`}>Exporter CSV</LinkButton>
           <LinkButton variant="secondary" prefetch={false} href={`/api/export/payroll?period=${period}&format=xlsx`}>Excel</LinkButton>
         </>} />
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <form className="flex items-end gap-2"><label className="text-sm">Mois <input type="month" name="period" defaultValue={period} max={current} className="input w-44" /></label><button className="rounded-md bg-navy px-4 py-2 text-sm text-white">Afficher</button></form>
-        {manage && <Form action={computeAll.bind(null, period)}><Submit>Calculer les paies de {period}</Submit></Form>}
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-lg border border-line bg-white p-3">
+        <form className="flex items-end gap-2"><FilterField label="Mois"><input type="month" name="period" defaultValue={period} max={current} className="input w-44" /></FilterField><ApplyButton>Afficher</ApplyButton></form>
+        {manage && <Form action={computeAll.bind(null, period)} className="max-sm:w-full"><Submit className="max-sm:w-full">Calculer les paies de {period}</Submit></Form>}
       </div>
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Total du mois" value={formatMoney(total)} hint={`${live.length} paie(s)`} />
         <Stat label="Déjà payé" tone="green" value={formatMoney(paid)} />
-        <Stat label="Reste à payer" tone="brand" value={formatMoney(total - paid)} hint={missing.length ? `${missing.length} enseignant(s) non calculé(s)` : undefined} />
+        <div className="col-span-2 sm:col-span-1"><Stat label="Reste à payer" tone="brand" value={formatMoney(total - paid)} hint={missing.length ? `${missing.length} enseignant(s) non calculé(s)` : undefined} /></div>
       </div>
       {live.length === 0 ? <EmptyState title="Aucune paie calculée pour ce mois" text={manage ? "Cliquez sur « Calculer les paies » : les montants sont calculés depuis les appels enregistrés et les paiements encaissés." : undefined} /> : (
-        <Table head={["Enseignant", "Modalité", "Base", "Calculé", "Ajustement", "Montant", "Statut", "Actions"]}>
+        <Table head={["Enseignant", "Montant", "Statut", "Modalité", "Base", "Calculé", "Ajustement", "Actions"]} caption={`Rémunérations ${period}`}>
           {live.map((p) => (
             <tr key={p.id} className="align-top">
-              <Td><Link href={`/payroll/${p.id}`} className="font-medium text-navy hover:text-brand">{p.teacher.lastName} {p.teacher.firstName}</Link></Td>
+              <Td cell="primary"><Link href={`/payroll/${p.id}`} className="font-semibold text-navy hover:text-brand">{p.teacher.lastName} {p.teacher.firstName}</Link></Td>
+              <Td cell="num" className="font-bold text-navy">{formatMoney(p.amount)}</Td>
+              <Td><Badge tone={TONE[p.status]}>{PAY_STATUS_LABEL[p.status]}</Badge>{p.mode && <span className="block text-xs text-muted">{p.mode.label}</span>}</Td>
               <Td className="text-xs">{PAY_MODE_LABEL[p.payMode]}<span className="block text-muted">{p.payMode === "POURCENTAGE" ? `${p.rate} %` : formatMoney(p.rate)}</span></Td>
               <Td className="text-xs">{quantityLabel(p.payMode, p.quantity)}</Td>
-              <Td className="tabular-nums">{formatMoney(p.computedAmount)}</Td>
-              <Td className="tabular-nums text-xs">{p.adjustment ? <>{p.adjustment > 0 ? "+" : ""}{formatMoney(p.adjustment)}<span className="block text-muted">{p.adjustmentNote}</span></> : "—"}</Td>
-              <Td className="font-semibold tabular-nums">{formatMoney(p.amount)}</Td>
-              <Td><Badge tone={TONE[p.status]}>{PAY_STATUS_LABEL[p.status]}</Badge>{p.mode && <span className="block text-xs text-muted">{p.mode.label}</span>}</Td>
-              <Td className="min-w-64 whitespace-normal">
+              <Td cell="num">{formatMoney(p.computedAmount)}</Td>
+              <Td cell="num" className="text-xs">{p.adjustment ? <>{p.adjustment > 0 ? "+" : ""}{formatMoney(p.adjustment)}<span className="block text-muted">{p.adjustmentNote}</span></> : "—"}</Td>
+              <Td cell="actions" className="lg:min-w-72 lg:whitespace-normal">
                 {manage && p.status === "BROUILLON" && (
-                  <div className="space-y-2">
-                    <Form action={computeOne.bind(null, p.teacherId, period)}><Submit variant="ghost" className="px-0 py-0 text-xs">↻ Recalculer</Submit></Form>
-                    <Form action={validate.bind(null, p.id)} className="flex flex-wrap items-end gap-1">
-                      <input name="adjustment" placeholder="± ajust." className="input w-24 py-1 text-xs" aria-label="Ajustement en DT" />
-                      <input name="note" placeholder="Motif" className="input w-32 py-1 text-xs" aria-label="Motif de l'ajustement" />
-                      <Submit variant="secondary" className="px-2 py-1 text-xs">Valider</Submit>
+                  <div className="w-full space-y-2">
+                    <Form action={computeOne.bind(null, p.teacherId, period)}><Submit variant="ghost" size="sm">↻ Recalculer</Submit></Form>
+                    <Form action={validate.bind(null, p.id)} className="grid grid-cols-[1fr_1.4fr_auto] items-end gap-1.5">
+                      <input name="adjustment" placeholder="± ajust." inputMode="decimal" className="input pointer-fine:min-h-8 pointer-fine:py-1 pointer-fine:text-xs" aria-label="Ajustement en DT" />
+                      <input name="note" placeholder="Motif" className="input pointer-fine:min-h-8 pointer-fine:py-1 pointer-fine:text-xs" aria-label="Motif de l'ajustement" />
+                      <Submit variant="secondary" size="sm">Valider</Submit>
                     </Form>
                   </div>
                 )}
                 {manage && p.status === "VALIDE" && (
-                  <Form action={pay.bind(null, p.id)} className="flex flex-wrap items-end gap-1">
-                    <Select label="Moyen" name="modeId" options={modeOptions(modes)} wrapperClass="w-36" />
-                    <Input label="Date" name="paidAt" type="date" defaultValue={todayISO()} max={todayISO()} wrapperClass="w-36" />
-                    <Input label="Réf." name="reference" wrapperClass="w-24" />
-                    <Submit className="px-2 py-1.5 text-xs">Payer</Submit>
+                  <Form action={pay.bind(null, p.id)} className="grid w-full grid-cols-2 items-end gap-1.5 md:grid-cols-[1fr_1fr_5rem_auto]">
+                    <Select label="Moyen" name="modeId" options={modeOptions(modes)} />
+                    <Input label="Date" name="paidAt" type="date" defaultValue={todayISO()} max={todayISO()} />
+                    <Input label="Réf." name="reference" />
+                    <Submit size="sm" className="max-md:min-h-11">Payer</Submit>
                   </Form>
                 )}
                 {manage && (

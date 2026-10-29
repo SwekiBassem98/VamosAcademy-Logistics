@@ -28,6 +28,10 @@ const { GET: exportRoute } = await import("@/app/api/export/[kind]/route");
 const { GET: healthRoute } = await import("@/app/api/health/route");
 const { logError } = await import("@/server/log");
 const { toCsv } = await import("@/server/exports");
+const expenses = await import("@/server/services/expenses");
+const { GET: attachmentRoute } = await import("@/app/api/attachments/[id]/route");
+const { hit } = await import("@/server/rate-limit");
+const { defaultBillingMonths } = await import("@/lib/billing");
 
 const fd = (o: Record<string, string>) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
 async function sessionFor(userId: string, createdAt = new Date()) {
@@ -69,6 +73,38 @@ describe("sécurité", () => {
     hdrs.set("x-real-ip", "203.0.113.10"); // un autre poste n'est pas bloqué
     expect((await loginAction(null, fd({ email: "inconnu@sec.tn", password: "mauvais" })))?.error).toMatch(/incorrect/);
   }, 60_000); // chaque échec coûte volontairement une comparaison bcrypt
+
+  it("la limitation est partagée en base (plusieurs instances) et la fenêtre se réinitialise", async () => {
+    expect((await hit("test:a", 2, 60_000)).allowed).toBe(true);
+    expect((await hit("test:a", 2, 60_000)).allowed).toBe(true);
+    expect((await hit("test:a", 2, 60_000)).allowed).toBe(false);
+    expect((await db.rateLimit.findUniqueOrThrow({ where: { key: "test:a" } })).count).toBe(3);
+    await db.rateLimit.update({ where: { key: "test:a" }, data: { resetAt: new Date(Date.now() - 1) } });
+    expect((await hit("test:a", 2, 60_000)).allowed).toBe(true);
+  });
+
+  it("stocke les justificatifs en base et ne les sert qu'aux rôles autorisés", async () => {
+    await db.schoolYear.create({ data: { label: "2026-2027", startDate: new Date("2026-09-01T12:00:00Z"), endDate: new Date("2027-06-30T12:00:00Z"), billingMonths: defaultBillingMonths(2026), active: true } });
+    const cat = await db.expenseCategory.create({ data: { name: "Fournitures" } });
+    const admin = await db.user.create({ data: { email: "compta@sec.tn", fullName: "Compta", role: "COMPTABLE", passwordHash: "x" } });
+    const pdf = new File([Buffer.from("%PDF-1.4 justificatif de test")], "facture mars.pdf", { type: "application/pdf" });
+    const e = await expenses.createExpense({ categoryId: cat.id, label: "Papier", amount: 12500, modeId: "mode_especes", reference: null, spentAt: "2026-09-15" }, [pdf], admin.id);
+    const a = await db.expenseAttachment.findFirstOrThrow({ where: { expenseId: e.id }, include: { content: true } });
+    expect(Buffer.from(a.content!.data).toString()).toBe("%PDF-1.4 justificatif de test");
+    const fake = new File([Buffer.from("<html>")], "x.pdf", { type: "application/pdf" });
+    await expect(expenses.addAttachments(e.id, [fake], admin.id)).rejects.toThrow(/Format non accepté/);
+    const call = () => attachmentRoute(new Request(`http://x/api/attachments/${a.id}`), { params: Promise.resolve({ id: a.id }) });
+    await sessionFor(admin.id);
+    const ok = await call();
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toBe("application/pdf");
+    expect(Buffer.from(await ok.arrayBuffer()).toString()).toBe("%PDF-1.4 justificatif de test");
+    const teacher = await db.user.create({ data: { email: "prof@sec.tn", fullName: "Prof", role: "ENSEIGNANT", passwordHash: "x" } });
+    await sessionFor(teacher.id);
+    expect((await call()).status).toBe(403);
+    jar.clear();
+    expect((await call()).status).toBe(401);
+  });
 
   it("n'écrit aucune donnée personnelle ni le détail des requêtes dans les journaux", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => undefined);

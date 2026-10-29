@@ -1,4 +1,4 @@
-import { Card, PageHeader, Forbidden, Badge, Button } from "@/components/ui";
+import { Card, PageHeader, SectionTitle, Forbidden, Badge, Button, Callout } from "@/components/ui";
 import { Form, Input, Submit, Textarea } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { SettingsTabs } from "./tabs";
@@ -40,63 +40,64 @@ export default async function Settings() {
             <Input label="Nom" name="name" defaultValue={c?.name} />
             <Input label="Adresse (FR)" name="addressFr" defaultValue={c?.addressFr} />
             <Input label="Adresse (AR)" name="addressAr" dir="rtl" defaultValue={c?.addressAr} />
-            <div className="grid grid-cols-2 gap-4">
-              <Input label="Téléphone" name="phone" defaultValue={c?.phone} />
-              <Input label="E-mail" name="email" type="email" defaultValue={c?.email ?? ""} />
+            <div className="grid gap-4 xs:grid-cols-2">
+              <Input label="Téléphone" name="phone" type="tel" inputMode="tel" defaultValue={c?.phone} />
+              <Input label="E-mail" name="email" type="email" inputMode="email" defaultValue={c?.email ?? ""} />
             </div>
             <Textarea label="Pied de page des reçus" name="receiptFooter" defaultValue={c?.receiptFooter} />
             <Submit />
           </Form>
         </Card>
         <Card title="Nouvelle année scolaire">
-          <Form action={createSchoolYear} className="grid grid-cols-2 gap-4" resetOnSuccess>
+          <p className="mb-4 text-sm text-muted">L&apos;année tunisienne court de septembre à juin. Après création : choisissez les mois facturés, puis activez-la.</p>
+          <Form action={createSchoolYear} className="grid gap-4 xs:grid-cols-2" resetOnSuccess>
             <Input label="Libellé" name="label" placeholder="2027-2028" />
-            <Input label="Jour limite de paiement" name="dueDay" type="number" min={1} max={28} defaultValue={10} />
+            <Input label="Jour limite de paiement" name="dueDay" type="number" inputMode="numeric" min={1} max={28} defaultValue={10} />
             <Input label="Début" name="startDate" type="date" />
             <Input label="Fin" name="endDate" type="date" />
-            <Submit variant="secondary">Créer</Submit>
+            <div className="xs:col-span-2"><Submit variant="secondary" className="max-sm:w-full">Créer l&apos;année</Submit></div>
           </Form>
-          <p className="mt-3 text-xs text-muted">La réinscription en masse vers une nouvelle année est prévue (blueprint E7).</p>
+          <Callout tone="info" className="mt-4">Réinscription en masse vers une nouvelle année : pas encore disponible (blueprint E7). Les élèves se réinscrivent un par un depuis leur dossier.</Callout>
         </Card>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {can(user.role, "users.manage") && (
           <Card title="Données de démonstration">
-            <p className="text-sm text-gray-700">Les données fictives sont marquées <Badge tone="amber">DÉMO</Badge> partout dans l&apos;application et n&apos;apparaissent jamais comme réelles sur les documents (mention imprimée).</p>
+            <p className="text-sm text-ink-soft">Les données fictives sont marquées <Badge tone="amber">DÉMO</Badge> partout dans l&apos;application et n&apos;apparaissent jamais comme réelles sur les documents (mention imprimée).</p>
             <p className="mt-2 text-sm">Actuellement : <strong>{demo.students}</strong> élève(s), <strong>{demo.guardians}</strong> parent(s), <strong>{demo.teachers}</strong> enseignant(s), <strong>{demo.groups}</strong> groupe(s), <strong>{demo.expenses}</strong> dépense(s) de démonstration, <strong>{demo.accounts}</strong> compte(s) de test.</p>
             {demo.total > 0 ? (
               <div className="mt-4">
                 <ConfirmAction action={purgeDemo} label="Supprimer les données de démonstration" title="Supprimer définitivement les données de démonstration ?" withReason="Tapez SUPPRIMER pour confirmer"
                   message="Seules les données marquées DÉMO sont supprimées (avec leurs paiements, présences et notes). Les données réelles ne sont pas touchées." confirmLabel="Supprimer" />
               </div>
-            ) : <p className="mt-3 text-sm text-emerald-700">Aucune donnée de démonstration : la base ne contient que des données réelles.</p>}
+            ) : <p className="mt-3 text-sm text-success-700">Aucune donnée de démonstration : la base ne contient que des données réelles.</p>}
           </Card>
         )}
       </div>
 
-      <h2 className="mb-3 mt-8 text-lg font-semibold text-navy">Années scolaires</h2>
+      <SectionTitle>Années scolaires</SectionTitle>
       <div className="space-y-4">
         {years.map((y) => {
           const candidates = monthsBetween(y.startDate, y.endDate);
           const set = new Set(y.billingMonths);
           return (
             <Card key={y.id} title={<span className="flex items-center gap-2">{y.label} {y.active && <Badge tone="green">active</Badge>}</span>}
-              actions={!y.active && <form action={activateYear.bind(null, y.id)}><Button variant="secondary" className="py-1 text-xs">Activer</Button></form>}>
+              actions={!y.active && <form action={activateYear.bind(null, y.id)}><Button type="submit" variant="secondary" size="sm">Activer cette année</Button></form>}>
               <p className="mb-3 text-sm text-muted">Du {formatDate(y.startDate)} au {formatDate(y.endDate)}</p>
               <Form action={updateYearBilling.bind(null, y.id)} className="space-y-3">
                 <fieldset>
-                  <legend className="mb-2 text-sm font-medium text-gray-700">Mois facturés</legend>
+                  <legend className="mb-2 text-sm font-semibold text-ink-soft">Mois facturés</legend>
                   <div className="flex flex-wrap gap-2">
                     {candidates.map((m) => (
-                      <label key={m} className="flex items-center gap-1.5 rounded border border-line px-2 py-1 text-xs capitalize">
-                        <input type="checkbox" name="months" value={m} defaultChecked={set.has(m)} className="accent-brand" /> {formatPeriod(m)}
+                      <label key={m} className="flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-line px-3 text-sm capitalize has-[:checked]:border-brand/40 has-[:checked]:bg-brand-50 pointer-fine:min-h-8 pointer-fine:text-xs">
+                        <input type="checkbox" name="months" value={m} defaultChecked={set.has(m)} className="size-4 accent-brand" /> {formatPeriod(m)}
                       </label>
                     ))}
                   </div>
                 </fieldset>
                 <div className="flex items-end gap-3">
-                  <Input label="Jour limite" name="dueDay" type="number" min={1} max={28} defaultValue={y.dueDay} wrapperClass="w-32" />
+                  <Input label="Jour limite" name="dueDay" type="number" inputMode="numeric" min={1} max={28} defaultValue={y.dueDay} wrapperClass="w-32" />
                   <Submit variant="secondary">Enregistrer</Submit>
                 </div>
               </Form>

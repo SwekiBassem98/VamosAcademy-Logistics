@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, PageHeader, Table, Td, Badge, Forbidden, LinkButton, DemoBadge } from "@/components/ui";
+import { Card, PageHeader, Table, Td, Badge, Forbidden, LinkButton, DemoBadge, Phone } from "@/components/ui";
 import { Form, Input, Select, Submit, Checkbox } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { PrintButton } from "@/components/print-button";
@@ -11,6 +11,9 @@ import { can } from "@/lib/permissions";
 import { formatDate, formatMinutes, formatMoney, minutesInput, WEEKDAYS } from "@/lib/format";
 import { GroupFields } from "../../group-fields";
 import { saveSlot, deleteSlot, updateGroup } from "../../actions";
+
+
+export const metadata = { title: "Groupe" };
 
 export default async function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await pageUser("academics.read");
@@ -34,30 +37,31 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   return (
     <>
       <PageHeader
+        back={{ href: "/academics", label: "Groupes" }}
         title={g.name}
         subtitle={`${g.subject.name} · ${g.level.name} · ${g.schoolYear.label} · ${g.teacher ? `${g.teacher.lastName} ${g.teacher.firstName}` : "enseignant à affecter"}`}
+        meta={<>
+          <Badge tone={g.enrollments.length >= g.capacity ? "red" : "blue"}>{g.enrollments.length}/{g.capacity} élèves</Badge>
+          <Badge tone="gray">{formatMoney(g.monthlyFee)} / mois</Badge>
+          {g.isDemo && <DemoBadge />}
+          {!g.active && <Badge tone="amber">archivé</Badge>}
+        </>}
+        primary={can(user.role, "attendance.write") && <LinkButton href={`/attendance?group=${g.id}`}>Faire l&apos;appel</LinkButton>}
         actions={<>
           <PrintButton label="Imprimer la liste" />
           {can(user.role, "grades.read") && <LinkButton variant="secondary" href={`/grades?group=${g.id}`}>Notes</LinkButton>}
-          {can(user.role, "attendance.write") && <LinkButton href={`/attendance?group=${g.id}`}>Faire l&apos;appel</LinkButton>}
         </>}
       />
-      <div className="mb-6 flex flex-wrap gap-2">
-        <Badge tone="blue">{g.enrollments.length}/{g.capacity} élèves</Badge>
-        <Badge tone="gray">{formatMoney(g.monthlyFee)} / mois</Badge>
-        {g.isDemo && <DemoBadge />}
-        {!g.active && <Badge tone="amber">archivé</Badge>}
-      </div>
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <Card title={`Liste des élèves — ${g.name}`}>
-            <Table head={["#", "Élève", "Matricule", "Parent", "Entrée"]} empty={g.enrollments.length === 0}>
+            <Table head={["#", "Élève", "Matricule", "Parent", "Entrée"]} empty={g.enrollments.length === 0} emptyText="Aucun élève inscrit.">
               {g.enrollments.map((e, i) => (
                 <tr key={e.id}>
-                  <Td className="text-muted">{i + 1}</Td>
-                  <Td><Link href={`/students/${e.studentId}`} className="font-medium hover:text-brand">{e.student.lastName} {e.student.firstName}</Link></Td>
+                  <Td cell="hide-sm" className="text-muted">{i + 1}</Td>
+                  <Td cell="primary"><Link href={`/students/${e.studentId}`} className="font-semibold text-navy hover:text-brand">{e.student.lastName} {e.student.firstName}</Link></Td>
                   <Td className="font-mono text-xs">{e.student.code}</Td>
-                  <Td>{e.student.guardians[0]?.guardian.phone ?? "—"}</Td>
+                  <Td><Phone value={e.student.guardians[0]?.guardian.phone} /></Td>
                   <Td>{formatDate(e.startDate)}</Td>
                 </tr>
               ))}
@@ -69,14 +73,14 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
           {g.slots.length === 0 && <p className="text-sm text-muted">Aucun créneau.</p>}
           <ul className="space-y-2 text-sm">
             {g.slots.map((s) => (
-              <li key={s.id} className="rounded border border-line px-3 py-2">
+              <li key={s.id} className="rounded-md border border-line px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span><strong>{WEEKDAYS[s.weekday]}</strong> {formatMinutes(s.startMin)}–{formatMinutes(s.endMin)} · {s.room.name}</span>
                   {manage && <ConfirmAction action={deleteSlot.bind(null, s.id)} small label="Supprimer" title="Supprimer ce créneau ?" message="Les séances déjà pointées sont conservées." />}
                 </div>
                 {manage && (
                   <details className="mt-1">
-                    <summary className="cursor-pointer text-xs text-brand">Modifier</summary>
+                    <summary className="inline-flex min-h-10 cursor-pointer items-center text-sm font-semibold text-brand">Modifier</summary>
                     <Form action={saveSlot} className="mt-2 grid grid-cols-2 gap-2">
                       <input type="hidden" name="groupId" value={g.id} /><input type="hidden" name="slotId" value={s.id} />
                       <Select label="Jour" name="weekday" defaultValue={String(s.weekday)} options={dayOptions} />

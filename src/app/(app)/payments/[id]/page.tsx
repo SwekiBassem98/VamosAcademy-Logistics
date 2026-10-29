@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Download } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { Card, Forbidden, Badge, LinkButton } from "@/components/ui";
 import { Form, Input, Select, Submit } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
@@ -37,17 +37,17 @@ export default async function Receipt({ params, searchParams }: { params: Promis
   return (
     <div className="mx-auto max-w-2xl">
       <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-2">
-        <Link href="/payments" className="text-sm text-muted hover:text-brand">← Paiements</Link>
+        <Link href="/payments" className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-muted hover:text-brand"><ArrowLeft className="size-4" aria-hidden /> Paiements</Link>
         <div className="flex gap-2">
           <LinkButton variant="secondary" prefetch={false} href={`/api/receipts/${p.id}/pdf`}><Download className="size-4" /> PDF</LinkButton>
           <PrintButton auto={print === "1" && !p.cancelledAt} />
         </div>
       </div>
 
-      <article className="relative rounded-lg border border-line bg-white p-8 print:border-0 print:p-0">
+      <article className="relative overflow-hidden rounded-lg border border-line bg-white p-4 shadow-xs sm:p-8 print:border-0 print:p-0 print:shadow-none">
         {p.cancelledAt && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-6xl font-black text-red-600/20 -rotate-12">{p.correctedBy ? "CORRIGÉ" : "ANNULÉ"}</div>}
         <DocHeader title="REÇU DE PAIEMENT" reference={p.receiptNo} lines={[formatDate(p.paidAt), `Année ${p.schoolYear.label}`]} />
-        <section className="mt-4 grid grid-cols-2 gap-2 text-sm">
+        <section className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
           <p><span className="text-muted">Élève :</span> <strong>{p.student.lastName} {p.student.firstName}</strong></p>
           <p><span className="text-muted">Matricule :</span> {p.student.code}</p>
           <p><span className="text-muted">Niveau :</span> {p.student.level?.name ?? "—"}</p>
@@ -67,7 +67,7 @@ export default async function Receipt({ params, searchParams }: { params: Promis
         </table>
         {p.corrects && <p className="mt-3 text-xs text-muted">Ce reçu corrige et remplace le reçu {p.corrects.receiptNo}.</p>}
         {p.note && <p className="mt-3 text-sm"><span className="text-muted">Note :</span> {p.note}</p>}
-        <div className="mt-8 flex items-end justify-between text-xs text-muted">
+        <div className="mt-8 flex flex-wrap items-end justify-between gap-4 text-xs text-muted">
           <p>Encaissé par : {cashier?.fullName ?? "—"}<br />Émis le {formatDateTime(p.createdAt)}</p>
           <p className="h-16 w-40 border-t border-dashed border-gray-400 pt-1 text-center">Cachet & signature</p>
         </div>
@@ -84,14 +84,14 @@ export default async function Receipt({ params, searchParams }: { params: Promis
         <div className="no-print mt-4 grid gap-4 md:grid-cols-2">
           <Card title="Corriger ce paiement">
             <p className="mb-3 text-xs text-muted">Erreur de montant, de date ou de moyen : ce reçu sera marqué « corrigé » (jamais supprimé) et un nouveau reçu lié sera émis.</p>
-            <Form action={correctPayment.bind(null, p.id)} className="grid grid-cols-2 gap-3">
+            <Form action={correctPayment.bind(null, p.id)} className="grid gap-3 xs:grid-cols-2">
               <Input label="Montant (DT) *" name="amount" defaultValue={moneyInput(p.amount)} inputMode="decimal" />
               <Input label="Date *" name="paidAt" type="date" defaultValue={dayInput(p.paidAt)} />
               <Select label="Moyen *" name="modeId" defaultValue={p.modeId} options={modeOptions(modes)} />
               <Input label="Référence" name="reference" defaultValue={p.reference ?? ""} />
-              <Input label="Motif de la correction *" name="reason" wrapperClass="col-span-2" />
+              <Input label="Motif de la correction *" name="reason" wrapperClass="xs:col-span-2" />
               <input type="hidden" name="note" value={p.note ?? ""} />
-              <div className="col-span-2"><Submit variant="secondary">Émettre le reçu corrigé</Submit></div>
+              <div className="xs:col-span-2"><Submit variant="secondary" className="max-sm:w-full">Émettre le reçu corrigé</Submit></div>
             </Form>
           </Card>
           <Card title="Annuler ce paiement">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UPLOAD_LIMIT_LABEL } from "@/lib/uploads";
 import { notFound } from "next/navigation";
 import { FileText } from "lucide-react";
 import { Card, PageHeader, Forbidden, Badge, DemoBadge } from "@/components/ui";
@@ -35,7 +36,7 @@ export default async function ExpensePage({ params }: { params: Promise<{ id: st
 
   return (
     <>
-      <PageHeader title={e.label} subtitle={<>{e.category.name} · {formatDate(e.spentAt)} · {e.mode.label}{e.reference && ` (${e.reference})`}</>} />
+      <PageHeader back={{ href: "/expenses", label: "Dépenses" }} title={e.label} subtitle={<>{e.category.name} · {formatDate(e.spentAt)} · {e.mode.label}{e.reference && ` (${e.reference})`}</>} />
       <div className="mb-6 flex flex-wrap gap-2">
         <Badge tone={e.cancelledAt ? "red" : "green"}>{e.correctedBy ? "corrigée" : e.cancelledAt ? "annulée" : "valide"}</Badge>
         <Badge>{formatMoney(e.amount)}</Badge>
@@ -44,7 +45,7 @@ export default async function ExpensePage({ params }: { params: Promise<{ id: st
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Détail & traçabilité">
-          <dl className="grid grid-cols-[140px_1fr] gap-y-2 text-sm">
+          <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-[140px_1fr] sm:gap-y-2 [&_dd]:mb-2 sm:[&_dd]:mb-0 [&_dt]:text-xs sm:[&_dt]:text-sm">
             <dt className="text-muted">Montant</dt><dd className={e.cancelledAt ? "line-through" : "font-semibold"}>{formatMoney(e.amount)}</dd>
             <dt className="text-muted">Saisie</dt><dd>{formatDateTime(e.createdAt)} par {author?.fullName ?? "—"}</dd>
             {e.corrects && <><dt className="text-muted">Corrige</dt><dd><Link className="text-brand" href={`/expenses/${e.corrects.id}`}>{e.corrects.label} ({formatMoney(e.corrects.amount)})</Link></dd></>}
@@ -53,11 +54,11 @@ export default async function ExpensePage({ params }: { params: Promise<{ id: st
           </dl>
         </Card>
         <Card title={`Justificatifs (${docs.length})`}>
-          {docs.length === 0 ? <p className="text-sm text-amber-700">Aucun justificatif joint.</p> : (
+          {docs.length === 0 ? <p className="text-sm text-warning-700">Aucun justificatif joint.</p> : (
             <ul className="space-y-2 text-sm">
               {docs.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-2">
-                  <a href={`/api/attachments/${a.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-brand hover:underline"><FileText className="size-4" />{a.fileName}</a>
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
+                  <a href={`/api/attachments/${a.id}`} target="_blank" rel="noreferrer" className="inline-flex min-h-10 min-w-0 items-center gap-2 break-all text-brand hover:underline"><FileText className="size-4 shrink-0" />{a.fileName}</a>
                   <span className="text-xs text-muted">{Math.ceil(a.size / 1024)} Ko · {formatDate(a.createdAt)}</span>
                 </li>
               ))}
@@ -65,7 +66,7 @@ export default async function ExpensePage({ params }: { params: Promise<{ id: st
           )}
           {can(user.role, "expenses.write") && !e.cancelledAt && (
             <Form action={attachToExpense.bind(null, e.id)} className="mt-4 flex flex-wrap items-end gap-2 border-t border-line pt-4" resetOnSuccess>
-              <Input label="Ajouter (PDF, JPG, PNG — 5 Mo max.)" name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="flex-1" />
+              <Input label={`Ajouter (PDF, JPG, PNG — ${UPLOAD_LIMIT_LABEL})`} name="files" type="file" multiple accept="application/pdf,image/jpeg,image/png" wrapperClass="flex-1" />
               <Submit variant="secondary">Joindre</Submit>
             </Form>
           )}

@@ -6,9 +6,10 @@
  *   QA_BASE_URL=http://localhost:3100 npx tsx scripts/qa-crawl.ts
  */
 import { createHash, randomBytes } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient, loadEnvFile } from "../src/server/prisma-client";
 
-const db = new PrismaClient();
+loadEnvFile();
+const db = createPrismaClient();
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const MAX_PAGES = Number(process.env.QA_MAX_PAGES ?? 400);
 const ROLES: [string, string][] = [
@@ -44,7 +45,7 @@ async function crawlRole(role: string, email: string): Promise<{ visited: number
     while (queue.length && seen.size < MAX_PAGES) {
       const [url, from] = queue.shift()!;
       // une seule visite par « forme » d'URL avec identifiant, pour rester rapide
-      const shape = url.replace(/[a-z0-9]{20,}/g, ":id").replace(/\?.*$/, (q) => (q.length > 60 ? "?…" : q));
+      const shape = url.replace(/[a-z0-9]{20,}/g, ":id").replace(/\d{4}-\d{2}(-\d{2})?/g, ":date").replace(/\?.*$/, (q) => (q.length > 60 ? "?…" : q));
       if (seen.has(shape)) continue;
       seen.add(shape);
       const res = await fetch(BASE + url, { headers: { cookie: `vamos_session=${token}` }, redirect: "manual" });

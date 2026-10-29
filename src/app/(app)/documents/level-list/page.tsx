@@ -25,8 +25,8 @@ export default async function LevelList({ searchParams }: { searchParams: Promis
   ]);
   return (
     <>
-      <div className="no-print mx-auto mb-4 flex max-w-3xl justify-between">
-        <Link href="/documents" className="text-sm text-muted hover:text-brand">← Documents</Link><PrintButton />
+      <div className="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
+        <Link href="/documents" className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Documents</Link><PrintButton />
       </div>
       <DocPage>
         <DocHeader title="Liste des élèves par niveau" reference={level.name} lines={[level.cycle.name, `Année ${year?.label ?? "—"}`]} />

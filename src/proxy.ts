@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Filtre rapide : sans cookie de session → /login. La validité réelle est vérifiée côté serveur (requireUser).
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (!req.cookies.has("vamos_session") && !req.nextUrl.pathname.startsWith("/api/health")) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";

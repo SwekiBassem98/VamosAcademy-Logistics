@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PageHeader, Table, Td, Badge, Forbidden, LinkButton, Stat, EmptyState } from "@/components/ui";
+import { PageHeader, Table, Td, Badge, Forbidden, LinkButton, Stat, EmptyState, Phone } from "@/components/ui";
 import { Bulk, SelectAll, SelectRow } from "@/components/bulk";
 import { PrintButton } from "@/components/print-button";
 import { DocHeader, DocFooter } from "@/components/document";
@@ -37,18 +37,19 @@ export default async function Unpaid({ searchParams }: { searchParams: Promise<P
         <PageHeader title="Impayés" subtitle={`Échéances échues non réglées — année ${year?.label ?? "—"}`}
           actions={<>
             <PrintButton label="Imprimer l'état" />
-            <LinkButton variant="secondary" prefetch={false} href={`/api/export/unpaid${qs}`}>CSV</LinkButton>
+            <LinkButton variant="secondary" prefetch={false} href={`/api/export/unpaid${qs}`}>Exporter CSV</LinkButton>
             <LinkButton variant="secondary" prefetch={false} href={`/api/export/unpaid${qs}${qs ? "&" : "?"}format=xlsx`}>Excel</LinkButton>
           </>} />
         <FilterBar params={params} keep={[]}>
-          <select name="level" defaultValue={params.level ?? ""} className="input w-full sm:w-52" aria-label="Niveau"><option value="">Tous niveaux</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
-          <select name="group" defaultValue={params.group ?? ""} className="input w-full sm:w-48" aria-label="Groupe"><option value="">Tous groupes</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
-          <select name="minDays" defaultValue={params.minDays ?? ""} className="input w-full sm:w-48" aria-label="Ancienneté"><option value="">Tout retard</option><option value="15">Plus de 15 jours</option><option value="30">Plus de 30 jours</option><option value="60">Plus de 60 jours</option></select>
+          <select name="level" defaultValue={params.level ?? ""} className="input md:w-52" aria-label="Niveau"><option value="">Tous niveaux</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
+          <select name="group" defaultValue={params.group ?? ""} className="input md:w-48" aria-label="Groupe"><option value="">Tous groupes</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
+          <select name="minDays" defaultValue={params.minDays ?? ""} className="input md:w-48" aria-label="Ancienneté"><option value="">Tout retard</option><option value="15">Plus de 15 jours</option><option value="30">Plus de 30 jours</option><option value="60">Plus de 60 jours</option></select>
         </FilterBar>
       </div>
       <div className="hidden print:block"><DocHeader title="État des impayés" lines={[`Année ${year?.label ?? "—"}`, `Au ${formatDate(new Date())}`]} /></div>
-      <div className="my-4 grid gap-3 sm:grid-cols-3">
-        <Stat label="Total impayé" tone="brand" value={formatMoney(total)} />
+      <div className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="col-span-2 sm:col-span-1">
+        <Stat label="Total impayé" tone="brand" value={formatMoney(total)} /></div>
         <Stat label="Élèves concernés" value={rows.length} />
         <Stat label="Échéances en retard" value={rows.reduce((s, r) => s + r.count, 0)} />
       </div>
@@ -57,26 +58,26 @@ export default async function Unpaid({ searchParams }: { searchParams: Promise<P
           ...(canMsg ? [{ label: "Préparer des rappels", href: `/messages/new?template=${reminder!.id}` }] : []),
           { label: "Exporter la sélection", href: "/api/export/students" },
         ]}>
-          <Table head={[<SelectAll key="a" />, "Élève", "Groupes", "Parent / téléphone", "Échéances", "Plus ancienne", "Montant dû", ""]}>
+          <Table head={[<SelectAll key="a" />, "Élève", "Montant dû", "Échéances", "Plus ancienne", "Parent / téléphone", "Groupes", ""]} caption="Élèves en retard de paiement">
             {rows.map(({ student: s, due, count, oldest, groups: gs }) => {
               const g = s.guardians[0]?.guardian;
               return (
                 <tr key={s.id}>
-                  <Td className="no-print"><SelectRow id={s.id} label={`${s.lastName} ${s.firstName}`} /></Td>
-                  <Td><Link href={`/students/${s.id}`} className="font-medium text-navy hover:text-brand">{s.lastName} {s.firstName}</Link><span className="block text-xs text-muted">{s.code} · {s.level?.name ?? "—"}</span></Td>
-                  <Td className="whitespace-normal text-xs">{[...gs].join(", ")}</Td>
-                  <Td>{g ? <>{g.lastName} {g.firstName}<span className="block text-xs">{g.phone}</span></> : <span className="text-muted">aucun parent</span>}</Td>
+                  <Td cell="select" className="no-print"><SelectRow id={s.id} label={`${s.lastName} ${s.firstName}`} /></Td>
+                  <Td cell="primary"><Link href={`/students/${s.id}`} className="font-semibold text-navy hover:text-brand">{s.lastName} {s.firstName}</Link><span className="block text-xs text-muted">{s.code} · {s.level?.name ?? "—"}</span></Td>
+                  <Td cell="num" className="font-bold text-brand">{formatMoney(due)}</Td>
                   <Td><Badge tone="red">{count}</Badge></Td>
                   <Td>{formatDate(oldest)}</Td>
-                  <Td className="font-semibold tabular-nums">{formatMoney(due)}</Td>
-                  <Td className="no-print space-x-3 text-xs">
-                    {can(user.role, "payments.write") && <Link href={`/payments/new?student=${s.id}`} className="text-brand">Encaisser</Link>}
-                    <Link href={`/students/${s.id}/releve`} className="text-navy">Relevé</Link>
+                  <Td>{g ? <>{g.lastName} {g.firstName}<span className="block"><Phone value={g.phone} /></span></> : <span className="text-muted">aucun parent</span>}</Td>
+                  <Td cell="wide" className="text-xs">{[...gs].join(", ")}</Td>
+                  <Td cell="actions" className="no-print">
+                    {can(user.role, "payments.write") && <LinkButton size="sm" href={`/payments/new?student=${s.id}`}>Encaisser</LinkButton>}
+                    <LinkButton size="sm" variant="secondary" href={`/students/${s.id}/releve`}>Relevé</LinkButton>
                   </Td>
                 </tr>
               );
             })}
-            <tr className="bg-gray-50 font-semibold"><Td className="no-print" /><Td>Total</Td><Td /><Td /><Td>{rows.reduce((s, r) => s + r.count, 0)}</Td><Td /><Td className="tabular-nums">{formatMoney(total)}</Td><Td className="no-print" /></tr>
+            <tr data-row="total" className="bg-surface font-semibold"><Td cell="hide-sm" className="no-print" /><Td cell="primary">Total</Td><Td cell="num">{formatMoney(total)}</Td><Td>{rows.reduce((s, r) => s + r.count, 0)}</Td><Td /><Td /><Td /><Td className="no-print" /></tr>
           </Table>
         </Bulk>
       )}

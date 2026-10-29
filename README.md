@@ -7,7 +7,7 @@ Application web de gestion du centre de soutien scolaire **VAMOS ACADEMY** (Keli
 
 ## Démarrage local (développement)
 
-Prérequis : Node.js ≥ 20, PostgreSQL ≥ 14.
+Prérequis : Node.js ≥ 20.19, PostgreSQL ≥ 14.
 
 ```bash
 npm install
@@ -23,7 +23,8 @@ npm run dev                                # http://localhost:3000
 - Les données de démonstration sont marquées **DÉMO** et créent un compte de test par rôle (`…@demo.vamos-academy.tn`,
   mot de passe `Demo2026vamos`, **développement uniquement**). Suppression : *Paramètres → Données de démonstration*.
 
-**Déploiement, sauvegarde, restauration, mise à jour : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md).**
+**Déploiement sur Vercel + base Neon : [docs/DEPLOIEMENT_VERCEL.md](docs/DEPLOIEMENT_VERCEL.md).**
+**Déploiement sur un serveur Linux, sauvegarde, restauration, mise à jour : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md).**
 **Guide utilisateur (français) : [docs/GUIDE_UTILISATEUR.md](docs/GUIDE_UTILISATEUR.md).**
 
 ## Vérifications
@@ -38,7 +39,7 @@ npm run dev                                # http://localhost:3000
 
 ## Configuration
 
-Voir `.env.example`. Variables principales : `DATABASE_URL`, `STORAGE_DIR` (justificatifs, à sauvegarder), `BACKUP_DIR`,
+Voir `.env.example`. Variables principales : `DATABASE_URL` (+ `DATABASE_URL_UNPOOLED` derrière un pooler), `BACKUP_DIR`,
 `KEEP_DAYS`. Aucun service d'envoi (SMS, WhatsApp, e-mail) n'est branché : les messages sont préparés puis envoyés par l'équipe.
 
 ## Conventions

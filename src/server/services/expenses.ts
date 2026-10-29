@@ -21,7 +21,7 @@ export async function createExpense(input: ExpenseInput, files: File[], userId: 
   await checkMode(input.modeId, input.reference);
   const year = await getActiveYear();
   const uploads = [];
-  for (const f of files.filter((f) => f.size > 0)) uploads.push(await saveUpload(f, "expenses"));
+  for (const f of files.filter((f) => f.size > 0)) uploads.push(await saveUpload(f));
   const e = await db.expense.create({
     data: {
       ...input, spentAt: parseDay(input.spentAt), schoolYearId: year.id, createdById: userId, ...extra,
@@ -38,7 +38,7 @@ export async function addAttachments(expenseId: string, files: File[], userId: s
   const valid = files.filter((f) => f.size > 0);
   if (!valid.length) throw new BusinessError("Choisissez au moins un fichier.");
   for (const f of valid) {
-    const u = await saveUpload(f, "expenses");
+    const u = await saveUpload(f);
     await db.expenseAttachment.create({ data: { ...u, expenseId, uploadedById: userId } });
   }
   await audit(userId, "expense.attach", "Expense", expenseId, { files: valid.map((f) => f.name) });

@@ -1,9 +1,9 @@
-import { Card, PageHeader, Table, Td, Forbidden, Stat, LinkButton } from "@/components/ui";
+import { Card, PageHeader, Table, Td, Forbidden, Stat, LinkButton, ApplyButton } from "@/components/ui";
 import { BarChart } from "@/components/charts";
 import { PrintButton } from "@/components/print-button";
 import { DocHeader, DocFooter } from "@/components/document";
 import { PersistFilters } from "@/components/persist-filters";
-import { href, type Params } from "@/components/table-tools";
+import { FilterField, href, type Params } from "@/components/table-tools";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { financialReport, reportFilters } from "@/server/services/reports";
@@ -32,33 +32,32 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
         <PageHeader title="Rapports financiers" subtitle={`${f.label}${f.groupName ? ` · ${f.groupName}` : ""}${f.levelName ? ` · ${f.levelName}` : ""}`}
           actions={<>
             <PrintButton label="Imprimer" />
-            <LinkButton variant="secondary" prefetch={false} href={`/api/export/report${qs}`}>CSV</LinkButton>
+            <LinkButton variant="secondary" prefetch={false} href={`/api/export/report${qs}`}>Exporter CSV</LinkButton>
             <LinkButton variant="secondary" prefetch={false} href={`/api/export/report${qs}${qs ? "&" : "?"}format=xlsx`}>Excel</LinkButton>
           </>} />
-        <form className="mb-6 flex flex-wrap items-end gap-2 rounded-lg border border-line bg-white p-3">
-          <label className="flex flex-col text-sm">Année scolaire
-            <select name="year" defaultValue={params.year ?? ""} className="input mt-1 w-36"><option value="">Active</option>{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select>
-          </label>
-          <label className="flex flex-col text-sm">Mois (rapport mensuel)
-            <input type="month" name="month" defaultValue={params.month ?? ""} className="input mt-1 w-44" />
-          </label>
-          <span className="pb-2 text-xs text-muted">ou</span>
-          <label className="flex flex-col text-sm">Du <input type="date" name="from" defaultValue={params.from ?? ""} className="input mt-1 w-40" /></label>
-          <label className="flex flex-col text-sm">Au <input type="date" name="to" defaultValue={params.to ?? ""} max={todayISO()} className="input mt-1 w-40" /></label>
-          <label className="flex flex-col text-sm">Niveau
-            <select name="level" defaultValue={params.level ?? ""} className="input mt-1 w-48"><option value="">Tous</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
-          </label>
-          <label className="flex flex-col text-sm">Groupe
-            <select name="group" defaultValue={params.group ?? ""} className="input mt-1 w-44"><option value="">Tous</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
-          </label>
-          <button className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white">Afficher</button>
+        <form className="mb-6 grid grid-cols-2 items-end gap-3 rounded-lg border border-line bg-white p-3 sm:p-4 md:flex md:flex-wrap" role="search" aria-label="Période et périmètre du rapport">
+          <FilterField label="Année scolaire">
+            <select name="year" defaultValue={params.year ?? ""} className="input md:w-36"><option value="">Active</option>{years.map((y) => <option key={y.id} value={y.id}>{y.label}</option>)}</select>
+          </FilterField>
+          <FilterField label="Mois (rapport mensuel)">
+            <input type="month" name="month" defaultValue={params.month ?? ""} className="input md:w-44" />
+          </FilterField>
+          <FilterField label="Ou du"><input type="date" name="from" defaultValue={params.from ?? ""} className="input md:w-40" /></FilterField>
+          <FilterField label="Au"><input type="date" name="to" defaultValue={params.to ?? ""} max={todayISO()} className="input md:w-40" /></FilterField>
+          <FilterField label="Niveau">
+            <select name="level" defaultValue={params.level ?? ""} className="input md:w-48"><option value="">Tous</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
+          </FilterField>
+          <FilterField label="Groupe">
+            <select name="group" defaultValue={params.group ?? ""} className="input md:w-44"><option value="">Tous</option>{groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}</select>
+          </FilterField>
+          <ApplyButton className="col-span-2 md:col-span-1">Afficher</ApplyButton>
         </form>
       </div>
 
       <div className="hidden print:block"><DocHeader title="Rapport financier" lines={[f.label, ...(f.groupName ? [f.groupName] : []), ...(f.levelName ? [f.levelName] : [])]} /></div>
 
-      <div className="my-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat label="Facturé" value={formatMoney(t.billed)} hint="échéances de la période" />
+      <div className="my-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="col-span-2 lg:col-span-1"><Stat label="Facturé" value={formatMoney(t.billed)} hint="échéances de la période" /></div>
         <Stat label="Encaissé" tone="green" value={formatMoney(t.cashed)} hint={r.collectionRate != null ? `taux de recouvrement ${r.collectionRate} %` : undefined} />
         <Stat label="Dépenses" value={r.scoped ? "—" : formatMoney(t.spent)} hint={r.scoped ? "non ventilées par groupe" : undefined} />
         <Stat label="Rémunérations" value={r.scoped ? "—" : formatMoney(t.payroll)} />
@@ -69,21 +68,21 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
         <BarChart data={r.months.map((m) => ({ label: m.label.slice(0, 4) + ". " + m.label.slice(-2), values: [m.cashed, m.spent + m.payroll] }))} series={[{ name: "Encaissé" }, { name: "Dépenses + rémunérations" }]} unit="money" caption="Encaissements et charges par mois, en milliers de dinars" />
       </Card>
 
-      <Table head={["Mois", "Facturé", "Encaissé", "Dépenses", "Rémunérations", "Résultat", "Impayés échus"]}>
+      <Table head={["Mois", "Facturé", "Encaissé", "Dépenses", "Rémunérations", "Résultat", "Impayés échus"]} caption="Détail mensuel">
         {r.months.map((m) => (
           <tr key={m.key}>
-            <Td className="capitalize">{m.label}</Td>
-            <Td className="tabular-nums">{formatMoney(m.billed)}</Td>
-            <Td className="tabular-nums text-emerald-700">{formatMoney(m.cashed)}</Td>
-            <Td className="tabular-nums">{formatMoney(m.spent)}</Td>
-            <Td className="tabular-nums">{formatMoney(m.payroll)}</Td>
-            <Td className={`font-semibold tabular-nums ${m.result < 0 ? "text-brand" : "text-navy"}`}>{formatMoney(m.result)}</Td>
-            <Td className="tabular-nums">{formatMoney(m.overdue)}</Td>
+            <Td cell="primary" className="font-semibold capitalize">{m.label}</Td>
+            <Td cell="num">{formatMoney(m.billed)}</Td>
+            <Td cell="num" className="text-success-600">{formatMoney(m.cashed)}</Td>
+            <Td cell="num">{formatMoney(m.spent)}</Td>
+            <Td cell="num">{formatMoney(m.payroll)}</Td>
+            <Td cell="num" className={`font-semibold ${m.result < 0 ? "text-brand" : "text-navy"}`}>{formatMoney(m.result)}</Td>
+            <Td cell="num">{formatMoney(m.overdue)}</Td>
           </tr>
         ))}
-        <tr className="bg-gray-50 font-semibold">
-          <Td>Total</Td><Td className="tabular-nums">{formatMoney(t.billed)}</Td><Td className="tabular-nums">{formatMoney(t.cashed)}</Td><Td className="tabular-nums">{formatMoney(t.spent)}</Td>
-          <Td className="tabular-nums">{formatMoney(t.payroll)}</Td><Td className="tabular-nums">{formatMoney(t.result)}</Td><Td className="tabular-nums">{formatMoney(t.overdue)}</Td>
+        <tr data-row="total" className="bg-surface font-semibold">
+          <Td cell="primary">Total</Td><Td cell="num">{formatMoney(t.billed)}</Td><Td cell="num">{formatMoney(t.cashed)}</Td><Td cell="num">{formatMoney(t.spent)}</Td>
+          <Td cell="num">{formatMoney(t.payroll)}</Td><Td cell="num">{formatMoney(t.result)}</Td><Td cell="num">{formatMoney(t.overdue)}</Td>
         </tr>
       </Table>
 
@@ -91,7 +90,7 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
         <Card title="Par groupe">
           {r.byGroup.length === 0 ? <p className="text-sm text-muted">Aucune donnée.</p> : (
             <table className="w-full text-sm"><thead><tr className="text-left text-xs text-muted"><th>Groupe</th><th className="text-right">Encaissé</th><th className="text-right">Impayé</th></tr></thead>
-              <tbody>{r.byGroup.map((g) => <tr key={g.name} className="border-t border-line"><td className="py-1">{g.name}</td><td className="text-right tabular-nums">{formatMoney(g.cashed)}</td><td className="text-right tabular-nums">{formatMoney(g.overdue)}</td></tr>)}</tbody>
+              <tbody>{r.byGroup.map((g) => <tr key={g.name} className="border-t border-line"><td className="py-1.5 pr-2">{g.name}</td><td className="text-right tabular-nums">{formatMoney(g.cashed)}</td><td className="text-right tabular-nums">{formatMoney(g.overdue)}</td></tr>)}</tbody>
             </table>
           )}
         </Card>

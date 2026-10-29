@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ───────────── Sécurité ─────────────
@@ -475,17 +474,26 @@ model Expense {
   @@index([spentAt])
 }
 
-// Justificatif (facture, ticket…) stocké hors du dossier public, servi après contrôle des droits
+// Justificatif (facture, ticket…) jamais public : servi après contrôle des droits
 model ExpenseAttachment {
-  id           String   @id @default(cuid())
+  id           String             @id @default(cuid())
   expenseId    String
-  expense      Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  expense      Expense            @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   fileName     String
-  storedName   String   @unique
+  storedName   String             @unique
   mimeType     String
   size         Int
   uploadedById String?
-  createdAt    DateTime @default(now())
+  content      AttachmentContent?
+  createdAt    DateTime           @default(now())
+}
+
+// Contenu du justificatif, stocké dans la base (compatible hébergement sans disque persistant, inclus dans pg_dump).
+// Table séparée : les listes de justificatifs ne chargent jamais les fichiers. Absent pour les anciens fichiers sur disque.
+model AttachmentContent {
+  attachmentId String            @id
+  attachment   ExpenseAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+  data         Bytes
 }
 
 // ───────────── Rémunérations enseignants ─────────────
@@ -680,4 +688,11 @@ model Grade {
   comment      String?
 
   @@unique([assessmentId, studentId])
+}
+
+// Limitation des tentatives (connexion, mot de passe) partagée entre toutes les instances du serveur
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
 }

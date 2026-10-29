@@ -1,5 +1,6 @@
-import { Card, PageHeader, Forbidden, Badge, EmptyState } from "@/components/ui";
-import { Form, Submit } from "@/components/form";
+import { Card, PageHeader, Forbidden, Badge, EmptyState, ApplyButton, Callout } from "@/components/ui";
+import { Form, FormActions, Submit } from "@/components/form";
+import { FilterField } from "@/components/table-tools";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { buildRecipients, parseTarget } from "@/server/services/messages";
@@ -22,18 +23,18 @@ export default async function NewMessages({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <PageHeader title="Préparer des messages" subtitle="1. Choisissez un modèle et des destinataires · 2. Vérifiez chaque texte · 3. Enregistrez : les messages seront « à envoyer » (aucun envoi automatique)." />
-      <form className="mb-6 grid items-end gap-3 rounded-lg border border-line bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <PageHeader back={{ href: "/messages", label: "Messages" }} title="Préparer des messages" subtitle="1. Choisissez un modèle et des destinataires · 2. Vérifiez chaque texte · 3. Enregistrez : les messages seront « à envoyer » (aucun envoi automatique)." />
+      <form className="mb-6 grid items-end gap-3 rounded-lg border border-line bg-white p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-4">
         {sp.ids && <input type="hidden" name="ids" value={sp.ids} />}
-        <label className="text-sm">Modèle
-          <select name="template" defaultValue={template?.id ?? ""} className="input mt-1" required>
+        <FilterField label="1. Modèle">
+          <select name="template" defaultValue={template?.id ?? ""} className="input" required>
             <option value="">Choisir…</option>
             {templates.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.audience === "PARENT" ? "parents" : "enseignants"})</option>)}
           </select>
-        </label>
+        </FilterField>
         {!sp.ids ? (
-          <label className="text-sm">Destinataires
-            <select name="target" defaultValue={sp.target ?? ""} className="input mt-1" required>
+          <FilterField label="2. Destinataires">
+            <select name="target" defaultValue={sp.target ?? ""} className="input" required>
               <option value="">Choisir…</option>
               <option value="unpaid">Parents des élèves en retard de paiement</option>
               <option value={`absent:${todayISO()}`}>Parents des élèves absents aujourd&apos;hui</option>
@@ -41,18 +42,18 @@ export default async function NewMessages({ searchParams }: { searchParams: Prom
               <option value="teachers">Tous les enseignants actifs</option>
               {groups.map((g) => <option key={g.id} value={`group:${g.id}`}>Parents du groupe {g.name}</option>)}
             </select>
-          </label>
+          </FilterField>
         ) : <p className="text-sm">Destinataires : <strong>{sp.ids.split(",").length} élève(s) sélectionné(s)</strong></p>}
-        <label className="text-sm lg:col-span-1">Complément (facultatif)
-          <input name="extra" defaultValue={sp.extra ?? ""} maxLength={500} className="input mt-1" placeholder="Ajouté à la fin de chaque message" />
-        </label>
-        <button className="rounded-md bg-navy px-4 py-2 text-sm font-medium text-white">Aperçu</button>
+        <FilterField label="Complément (facultatif)">
+          <input name="extra" defaultValue={sp.extra ?? ""} maxLength={500} className="input" placeholder="Ajouté à la fin de chaque message" />
+        </FilterField>
+        <ApplyButton>Aperçu</ApplyButton>
       </form>
 
       {template && target && preview && (
         preview.recipients.length === 0 ? <EmptyState title="Aucun destinataire" text={preview.skipped.length ? `Ignorés : ${preview.skipped.join(" ; ")}` : "Aucune personne ne correspond à ce choix."} /> : (
           <Card title={`Aperçu : ${preview.recipients.length} message(s) — modèle « ${template.name} »`}>
-            {preview.skipped.length > 0 && <p className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">Ignorés : {preview.skipped.join(" ; ")}</p>}
+            {preview.skipped.length > 0 && <Callout tone="warning" className="mb-3">Ignorés : {preview.skipped.join(" ; ")}</Callout>}
             <Form action={prepareMessages} className="space-y-3">
               <input type="hidden" name="templateId" value={template.id} />
               {sp.target && <input type="hidden" name="target" value={sp.target} />}
@@ -62,18 +63,20 @@ export default async function NewMessages({ searchParams }: { searchParams: Prom
                 {preview.recipients.map((r) => {
                   const missing = missingVariables(r.body);
                   return (
-                    <li key={r.key} className="flex gap-3 px-3 py-2">
-                      <input type="checkbox" name="keys" value={r.key} defaultChecked={!!r.phone} className="mt-1 size-4 accent-brand" aria-label={`Inclure ${r.name}`} />
+                    <li key={r.key}>
+                      <label className="flex cursor-pointer gap-3 px-3 py-3 has-[:checked]:bg-brand-50/40">
+                      <input type="checkbox" name="keys" value={r.key} defaultChecked={!!r.phone} className="mt-0.5 size-5 shrink-0 accent-brand" aria-label={`Inclure ${r.name}`} />
                       <div className="min-w-0 flex-1 text-sm">
                         <p className="font-medium">{r.name} <span className="text-xs font-normal text-muted">· {r.phone ?? "pas de téléphone"} · {r.context}</span></p>
-                        <p className="mt-1 text-xs leading-relaxed text-gray-700">{r.body}</p>
-                        {missing.length > 0 && <Badge tone="amber">Information manquante : {missing.join(", ")}</Badge>}
+                        <p className="mt-1 text-sm leading-relaxed text-ink-soft sm:text-xs">{r.body}</p>
+                        {missing.length > 0 && <Badge tone="amber" className="mt-1 whitespace-normal">Information manquante : {missing.join(", ")}</Badge>}
                       </div>
+                      </label>
                     </li>
                   );
                 })}
               </ul>
-              <Submit>Enregistrer les messages à envoyer</Submit>
+              <FormActions sticky><Submit>Enregistrer les messages à envoyer</Submit></FormActions>
             </Form>
           </Card>
         )

@@ -5,12 +5,14 @@
  * Avec SEED_DEMO=true : données FICTIVES marquées isDemo = true (badge « DÉMO » dans l'interface,
  * suppression en un clic dans Paramètres), et un compte de test par rôle (@demo.vamos-academy.tn).
  */
-import { PrismaClient, type AttendanceStatus, type Role } from "@prisma/client";
+import type { AttendanceStatus, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { createPrismaClient, loadEnvFile } from "../src/server/prisma-client";
 import { defaultBillingMonths, dueDateFor, billableMonths } from "../src/lib/billing";
 import { DEFAULT_TEMPLATES } from "../src/lib/templates";
 
-const db = new PrismaClient();
+loadEnvFile();
+const db = createPrismaClient();
 const isProduction = process.env.NODE_ENV === "production";
 export const DEMO_EMAIL_DOMAIN = "demo.vamos-academy.tn";
 

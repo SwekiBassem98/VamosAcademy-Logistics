@@ -1,7 +1,11 @@
 # Déploiement, sauvegarde, restauration et mise à jour
 
-Cible recommandée : un serveur Linux (Ubuntu 24.04 LTS) avec Node.js 20 LTS, PostgreSQL 16, nginx et un nom de domaine
-(ex. `gestion.vamos-academy.tn`). Une seule instance de l'application (la limitation des tentatives de connexion est en mémoire).
+Cible recommandée : un serveur Linux (Ubuntu 24.04 LTS) avec Node.js 20 LTS (≥ 20.19), PostgreSQL 16, nginx et un nom de domaine
+(ex. `gestion.vamos-academy.tn`). Hébergement sans serveur à administrer : **[DEPLOIEMENT_VERCEL.md](DEPLOIEMENT_VERCEL.md)** (Vercel + Neon).
+
+Depuis le 30/10/2026, les justificatifs de dépenses et la limitation des tentatives de connexion sont stockés **dans la base** :
+une sauvegarde PostgreSQL suffit, et plusieurs instances de l'application peuvent fonctionner en parallèle. `STORAGE_DIR` ne sert
+plus qu'à relire les justificatifs enregistrés avant cette date (à conserver tant qu'il en existe).
 
 > Les fichiers prêts à l'emploi sont dans `deploy/` : `vamos.service` (systemd), `nginx-vamos.conf`, `vamos-backup.cron`.
 > Ces fichiers n'ont **pas** été testés sur un serveur réel lors du développement ; seules les étapes marquées ✅ ont été exécutées.
@@ -72,7 +76,8 @@ HTTPS est obligatoire : le cookie de session est `Secure`, `HttpOnly`, `SameSite
 
 ## 6. Sauvegardes
 
-`scripts/backup.sh` produit chaque nuit un dump PostgreSQL compressé **et** une archive des justificatifs, avec rotation
+`scripts/backup.sh` produit chaque nuit un dump PostgreSQL compressé (justificatifs compris) **et**, s'il existe, une archive de
+l'ancien dossier de justificatifs `STORAGE_DIR`, avec rotation
 (`KEEP_DAYS`, 30 jours par défaut).
 
 ```bash
@@ -109,6 +114,14 @@ sudo systemctl restart vamos
 curl -s https://gestion.vamos-academy.tn/api/health   # 3. vérification
 ```
 
+Mise à jour « stockage en base » (30/10/2026) : une migration (`AttachmentContent`, `RateLimit`), appliquée par
+`prisma migrate deploy` ; justificatifs limités à 4 Mo par envoi (photos allégées automatiquement dans le navigateur).
+
+Mise à jour « refonte UI mobile-first » (30/10/2026) : aucune migration de base, aucune nouvelle variable d'environnement.
+La procédure ci-dessus suffit (`npm ci` récupère les mêmes dépendances ; la police de titres Plus Jakarta Sans est téléchargée
+au moment du build par `next/font`, comme Inter : le serveur de build doit avoir accès à Internet, le serveur d'exécution non).
+Après le redémarrage, vider le cache du navigateur n'est pas nécessaire (fichiers statiques versionnés).
+
 En cas d'échec : `git checkout <version précédente>`, `npm ci && npm run build`, puis restauration de la sauvegarde si une
 migration a été appliquée.
 
@@ -127,4 +140,5 @@ migration a été appliquée.
 - [ ] Aucune donnée de démonstration (pas d'avertissement sur le tableau de bord)
 - [ ] Logo officiel HD placé dans `public/brand/logo.png`
 - [ ] Paramètres du centre, année scolaire, grille tarifaire, moyens de paiement et réductions vérifiés
+- [ ] Interface vérifiée sur un téléphone réel du centre (connexion, appel, encaissement) et sur le poste d'accueil
 - [ ] Sauvegarde nocturne active et copie hors serveur organisée ; restauration testée
