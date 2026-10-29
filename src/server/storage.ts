@@ -22,14 +22,14 @@ export async function saveUpload(file: File, folder: string) {
   const kind = SIGNATURES.find((s) => s.test(buf));
   if (!kind) throw new BusinessError("Format non accepté : PDF, JPG ou PNG uniquement.");
   const storedName = `${randomBytes(16).toString("hex")}.${kind.ext}`;
-  const dir = path.join(ROOT, folder);
+  const dir = path.join(/*turbopackIgnore: true*/ ROOT, folder);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, storedName), buf, { flag: "wx" });
+  await writeFile(path.join(/*turbopackIgnore: true*/ dir, storedName), buf, { flag: "wx" });
   const fileName = file.name.replace(/[^\p{L}\p{N}._ -]/gu, "_").slice(0, 120) || `justificatif.${kind.ext}`;
   return { storedName, fileName, mimeType: kind.mime, size: file.size };
 }
 
 export async function readStored(folder: string, storedName: string) {
   if (!/^[a-f0-9]{32}\.(pdf|png|jpg)$/.test(storedName)) throw new Error("Nom de fichier invalide");
-  return readFile(path.join(ROOT, folder, storedName));
+  return readFile(path.join(/*turbopackIgnore: true*/ ROOT, folder, storedName));
 }

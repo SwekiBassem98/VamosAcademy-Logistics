@@ -21,7 +21,7 @@ rapports par période, notifications avec suivi, messages préparés (envoi manu
 | Accès sans session / session falsifiée (pages, exports, PDF, justificatifs) | redirection connexion / 401 |
 | En-têtes de sécurité (CSP, HSTS, X-Frame-Options, nosniff…) sur le build de production | présents |
 | Exercice sauvegarde → restauration sur base vierge | tables et totaux identiques, schéma à jour |
-| `npm audit --omit=dev` | 8 alertes (voir §4) |
+| `npm audit --omit=dev` | 0 alerte après montée de version (voir §4) |
 
 ## 3. Problèmes corrigés pendant l'audit
 
@@ -42,10 +42,17 @@ rapports par période, notifications avec suivi, messages préparés (envoi manu
 
 ## 4. Risques et limitations restants
 
-- **Dépendances** : 8 alertes `npm audit` sur Next (via PostCSS), Prisma (outil CLI), exceljs (uuid) et Zod. Correction
-  uniquement par montées de version majeures (Next 16, Prisma 7, Zod 4). Exposition jugée faible (outils de build/CLI,
-  fonction non utilisée) sauf Zod (épuisement mémoire, atténué : utilisateurs authentifiés, corps limité à 16 Mo, listes bornées).
-  **À planifier avant ou peu après l'ouverture.**
+- **Dépendances — corrigé (29/10/2026)** : les 8 alertes `npm audit --omit=dev` (Next via PostCSS, Prisma via
+  `@prisma/config`/deepmerge-ts, exceljs via uuid, Zod) sont résolues par les montées de version majeures
+  Next 15.5 → 16.4.1, Prisma 6.19 → 7.10.1 (avec l'adaptateur `@prisma/adapter-pg`, configuration dans `prisma.config.ts`),
+  Zod 3 → 4.6.7, et uuid forcé en 11.1.1 sous exceljs 4.4.0 (dernière version publiée ; `overrides` dans `package.json`).
+  Résultat : `npm audit --omit=dev` → 0 vulnérabilité. Toutes les vérifications du §2 ont été rejouées après la montée
+  (lint, TypeScript, 78/78 Vitest, 5/5 Playwright sur le build de production, `qa:crawl` 439 pages / 0 problème, en-têtes
+  de sécurité). Adaptations : `middleware.ts` → `proxy.ts` (Next 16), limite du corps de requête du proxy portée à 16 Mo
+  (sinon tronquée à 10 Mo avant les Server Actions), configuration ESLint native de Next 16.
+  Restent 3 alertes **de développement uniquement** (vitest 3 : tinypool, `@vitest/mocker`), non déployées ; correction
+  par vitest 5 (majeure) à planifier.
+  Node.js requis : ≥ 20.19 (Prisma 7).
 - **Déploiement réel non testé** : les fichiers `deploy/` (systemd, nginx, cron) et la procédure n'ont pas été exécutés sur un serveur.
 - **Limitation des tentatives en mémoire** : valable pour une seule instance ; remise à zéro au redémarrage.
 - **CSP avec `'unsafe-inline'`** pour les scripts (exigence de Next.js sans nonce) : protection XSS partielle, compensée par

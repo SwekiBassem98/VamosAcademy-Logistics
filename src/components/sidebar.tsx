@@ -3,7 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   LayoutDashboard, Users, UserRound, GraduationCap, Layers, CalendarDays, ClipboardCheck, Wallet,
   AlertTriangle, Receipt, BarChart3, Settings, ShieldCheck, History, X, NotebookPen, DoorOpen, HandCoins, Bell, MessageSquareText, Printer,
@@ -71,9 +71,11 @@ export function AppShell({ items, user, yearLabel, notices, unread, logout, chil
   logout: () => Promise<void>;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  // Menu mobile lié à la page où il a été ouvert : il se referme de lui-même après une navigation.
   const path = usePathname();
-  useEffect(() => setOpen(false), [path]);
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === path;
+  const setOpen = (o: boolean) => setOpenOn(o ? path : null);
   return (
     <div className="min-h-screen">
       <aside className="no-print fixed inset-y-0 left-0 z-20 hidden w-64 bg-navy lg:block"><Nav items={items} /></aside>

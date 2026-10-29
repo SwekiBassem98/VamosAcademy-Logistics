@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { createPrismaClient } from "../src/server/prisma-client";
 
 /** Base e2e remise à zéro, référentiel + données de démonstration, comptes de test connus. */
 export default async function globalSetup() {
@@ -8,7 +8,7 @@ export default async function globalSetup() {
   if (!/\/[^/?]+_test(\?|$)/.test(url)) throw new Error("E2E_DATABASE_URL doit pointer vers une base *_test");
   const env = { ...process.env, DATABASE_URL: url };
   execSync("npx prisma migrate deploy", { env, stdio: "pipe" });
-  const db = new PrismaClient({ datasources: { db: { url } } });
+  const db = createPrismaClient(url);
   try {
     const tables = await db.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
     await db.$executeRawUnsafe(`TRUNCATE ${tables.map((t) => `"${t.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`);

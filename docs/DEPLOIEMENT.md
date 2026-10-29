@@ -1,6 +1,6 @@
 # Déploiement, sauvegarde, restauration et mise à jour
 
-Cible recommandée : un serveur Linux (Ubuntu 24.04 LTS) avec Node.js 20 LTS, PostgreSQL 16, nginx et un nom de domaine
+Cible recommandée : un serveur Linux (Ubuntu 24.04 LTS) avec Node.js 20 LTS (≥ 20.19), PostgreSQL 16, nginx et un nom de domaine
 (ex. `gestion.vamos-academy.tn`). Une seule instance de l'application (la limitation des tentatives de connexion est en mémoire).
 
 > Les fichiers prêts à l'emploi sont dans `deploy/` : `vamos.service` (systemd), `nginx-vamos.conf`, `vamos-backup.cron`.

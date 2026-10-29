@@ -6,9 +6,10 @@
  *   QA_BASE_URL=http://localhost:3100 npx tsx scripts/qa-crawl.ts
  */
 import { createHash, randomBytes } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient, loadEnvFile } from "../src/server/prisma-client";
 
-const db = new PrismaClient();
+loadEnvFile();
+const db = createPrismaClient();
 const BASE = process.env.QA_BASE_URL ?? "http://localhost:3000";
 const MAX_PAGES = Number(process.env.QA_MAX_PAGES ?? 400);
 const ROLES: [string, string][] = [

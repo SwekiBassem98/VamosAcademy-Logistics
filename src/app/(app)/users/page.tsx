@@ -20,8 +20,8 @@ export default async function Users({ searchParams }: { searchParams: Promise<{ 
   const roleOptions = Object.entries(ROLE_LABELS).map(([value, label]) => ({ value, label }));
   const teacherOptions = teachers.map((t) => ({ value: t.id, label: `${t.lastName} ${t.firstName}` }));
 
-  const UserForm = ({ u }: { u?: User }) => (
-    <Form action={saveUser.bind(null, u?.id ?? null)} className="grid gap-4 sm:grid-cols-2" resetOnSuccess={!u}>
+  const userForm = (u?: User) => (
+    <Form key={u?.id ?? "new"} action={saveUser.bind(null, u?.id ?? null)} className="grid gap-4 sm:grid-cols-2" resetOnSuccess={!u}>
       <Input label="Nom complet *" name="fullName" defaultValue={u?.fullName} />
       <Input label="E-mail (identifiant) *" name="email" type="email" defaultValue={u?.email} autoComplete="off" />
       <Select label="Rôle *" name="role" defaultValue={u?.role ?? "RESPONSABLE"} options={roleOptions} />
@@ -48,7 +48,7 @@ export default async function Users({ searchParams }: { searchParams: Promise<{ 
         ))}
       </Table>
       <Card title={editing ? `Modifier — ${editing.fullName}` : "Nouveau compte"} className="mt-6">
-        <UserForm key={editing?.id ?? "new"} u={editing} />
+        {userForm(editing)}
       </Card>
     </>
   );

@@ -2,7 +2,7 @@
 import { z } from "zod";
 import { normalizePhone, parseMoney, parseTime } from "./format";
 
-const req = (label: string) => z.string({ required_error: `${label} est obligatoire` }).trim().min(1, `${label} est obligatoire`);
+const req = (label: string) => z.string({ error: `${label} est obligatoire` }).trim().min(1, `${label} est obligatoire`);
 const opt = z
   .string()
   .trim()
@@ -40,7 +40,7 @@ export const optMoney = (label = "Montant") =>
 
 export const day = (label = "Date") => req(label).regex(/^\d{4}-\d{2}-\d{2}$/, `${label} invalide`);
 const optDay = opt.refine((v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v), "Date invalide");
-const int = (label: string, min = 0, max = 1_000_000) => z.coerce.number({ invalid_type_error: `${label} invalide` }).int().min(min).max(max);
+const int = (label: string, min = 0, max = 1_000_000) => z.coerce.number({ error: `${label} invalide` }).int().min(min).max(max);
 
 export const loginSchema = z.object({
   email: req("E-mail").email("E-mail invalide").toLowerCase(),

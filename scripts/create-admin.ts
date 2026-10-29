@@ -8,10 +8,11 @@
  * Option --password-from-env : utilise ADMIN_PASSWORD (≥ 12 caractères, lettres et chiffres) au lieu d'en générer un.
  */
 import { randomBytes } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { createPrismaClient, loadEnvFile } from "../src/server/prisma-client";
 
-const db = new PrismaClient();
+loadEnvFile();
+const db = createPrismaClient();
 
 function arg(name: string) {
   const i = process.argv.indexOf(`--${name}`);

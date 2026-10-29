@@ -7,7 +7,7 @@ Application web de gestion du centre de soutien scolaire **VAMOS ACADEMY** (Keli
 
 ## Démarrage local (développement)
 
-Prérequis : Node.js ≥ 20, PostgreSQL ≥ 14.
+Prérequis : Node.js ≥ 20.19, PostgreSQL ≥ 14.
 
 ```bash
 npm install
