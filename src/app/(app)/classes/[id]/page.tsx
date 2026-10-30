@@ -87,8 +87,8 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
                   <Link href={`/students/${s.id}`} className="flex min-h-16 items-center gap-3 rounded-lg border border-line bg-white p-3 shadow-xs transition hover:border-navy-200 hover:shadow-sm">
                     <Initials first={s.firstName} last={s.lastName} color={g.subject.color} />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold text-ink">{s.lastName} {s.firstName}{s.isDemo && <DemoBadge />}</span>
-                      <span className="block truncate text-xs text-muted">{[s.className, s.school].filter(Boolean).join(" · ") || "Classe non renseignée"}</span>
+                      <span className="block line-clamp-2 break-words font-semibold text-ink">{s.lastName} {s.firstName}{s.isDemo && <DemoBadge />}</span>
+                      <span className="block line-clamp-2 break-words text-xs text-muted">{[s.className, s.school].filter(Boolean).join(" · ") || "Classe non renseignée"}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         <Badge tone={s.rate == null ? "gray" : s.rate >= 85 ? "green" : s.rate >= 70 ? "amber" : "red"}>{s.rate == null ? "pas d'appel" : `${s.rate} % présent`}</Badge>
                         {s.avg != null && <Badge tone="blue">moy. {formatScore(s.avg)}</Badge>}
@@ -112,7 +112,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
                   return (
                     <li key={s.id}>
                       <Link href={`/attendance?group=${g.id}&date=${todayISO(s.date)}`} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-surface sm:px-5">
-                        <span className="min-w-0 flex-1"><span className="block font-medium text-ink">{WEEKDAYS[((s.date.getUTCDay() + 6) % 7) + 1]} {formatDate(s.date)}</span>{s.topic && <span className="block truncate text-xs text-muted">{s.topic}</span>}</span>
+                        <span className="min-w-0 flex-1"><span className="block font-medium text-ink">{WEEKDAYS[((s.date.getUTCDay() + 6) % 7) + 1]} {formatDate(s.date)}</span>{s.topic && <span className="block line-clamp-2 break-words text-xs text-muted">{s.topic}</span>}</span>
                         <Badge tone={absent ? "amber" : "green"}>{absent ? `${absent} absent${absent > 1 ? "s" : ""}` : "complet"}</Badge>
                       </Link>
                     </li>
@@ -132,7 +132,7 @@ export default async function ClassPage({ params }: { params: Promise<{ id: stri
                   return (
                     <li key={a.id}>
                       <Link href={`/grades?group=${g.id}&a=${a.id}`} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-surface sm:px-5">
-                        <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">{a.title}</span><span className="text-xs text-muted">{KIND_LABEL[a.kind]} · {formatDate(a.date)} · T{a.term}</span></span>
+                        <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-medium text-ink">{a.title}</span><span className="text-xs text-muted">{KIND_LABEL[a.kind]} · {formatDate(a.date)} · T{a.term}</span></span>
                         <span className="text-right"><span className="block font-semibold tabular-nums text-navy">{avg == null ? "—" : `${formatScore(avg)}/20`}</span>
                           <span className={`text-xs ${complete ? "text-muted" : "font-semibold text-warning-700"}`}>{scored.length}/{roster.length} notes</span></span>
                       </Link>

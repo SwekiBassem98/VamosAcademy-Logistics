@@ -245,11 +245,12 @@ export function Stat({ label, value, hint, tone = "navy", href, icon }: {
   const body = (
     <>
       <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">{icon && <span aria-hidden className="text-faint [&_svg]:size-3.5">{icon}</span>}{label}</p>
-      <p className={clsx("mt-1.5 font-display text-xl font-extrabold tracking-tight tabular-nums sm:text-2xl", color)}>{value}</p>
+      <p className={clsx("mt-1.5 font-display text-lg font-extrabold tracking-tight tabular-nums @[11rem]:text-xl @[14rem]:text-2xl", color)}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </>
   );
-  const cls = "block min-w-0 rounded-lg border border-line bg-white p-3.5 shadow-xs sm:p-4";
+  // @container : la taille du chiffre suit la largeur de la carte (montants longs dans les grilles étroites)
+  const cls = "@container block min-w-0 rounded-lg border border-line bg-white p-3.5 shadow-xs sm:p-4";
   return href
     ? <Link href={href} className={clsx(cls, "transition hover:border-navy-200 hover:shadow-sm")}>{body}</Link>
     : <div className={cls}>{body}</div>;

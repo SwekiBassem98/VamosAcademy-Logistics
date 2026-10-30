@@ -68,7 +68,11 @@ export function Bulk({ children, links = [], actions = [], noun = "élément(s)"
 }
 
 export function SelectAll() {
-  return <input type="checkbox" name="sel-all" aria-label="Tout sélectionner" className="size-4 accent-brand" />;
+  return (
+    <label className="-m-2.5 inline-grid size-11 cursor-pointer place-items-center rounded-md hover:bg-navy-50 pointer-fine:-m-1.5 pointer-fine:size-7">
+      <input type="checkbox" name="sel-all" aria-label="Tout sélectionner" className="size-5 accent-brand pointer-fine:size-4" />
+    </label>
+  );
 }
 
 /** Case de sélection d'une ligne ; zone cliquable de 44 px au toucher. */
