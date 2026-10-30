@@ -67,6 +67,7 @@ export async function deleteReference(kind: "room" | "subject" | "level", id: st
     else await db.level.delete({ where: { id } });
     await audit(user.id, `${kind}.delete`, kind, id);
     revalidatePath("/academics");
+    return kind === "room" ? "Salle supprimée." : kind === "subject" ? "Matière supprimée." : "Niveau supprimé.";
   });
 }
 
@@ -133,9 +134,15 @@ export async function saveSlot(_: ActionState, fd: FormData): Promise<ActionStat
   });
 }
 
-export async function deleteSlot(slotId: string) {
-  const user = await requirePermission("academics.write");
-  const s = await db.scheduleSlot.delete({ where: { id: slotId } });
-  await audit(user.id, "slot.delete", "Group", s.groupId, { slotId, weekday: s.weekday, startMin: s.startMin });
-  revalidatePath(`/academics/groups/${s.groupId}`);
+export async function deleteSlot(slotId: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("academics.write");
+    const s = await db.scheduleSlot.findUnique({ where: { id: slotId } });
+    if (!s) throw new BusinessError("Ce créneau a déjà été supprimé.");
+    await db.scheduleSlot.delete({ where: { id: slotId } });
+    await audit(user.id, "slot.delete", "Group", s.groupId, { slotId, weekday: s.weekday, startMin: s.startMin });
+    revalidatePath(`/academics/groups/${s.groupId}`);
+    revalidatePath("/schedule");
+    return "Créneau supprimé.";
+  });
 }

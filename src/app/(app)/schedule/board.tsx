@@ -37,7 +37,7 @@ export function ScheduleBoard({ slots, days, today }: { slots: BoardSlot[]; days
           const daySlots = slots.filter((s) => s.weekday === d);
           return (
             <section key={d} aria-label={WEEKDAYS[d]} className={clsx("min-w-0 rounded-lg border bg-white", d === today ? "border-brand/40 ring-1 ring-brand/20" : "border-line", d !== day && "max-md:hidden print:block")}>
-              <h2 className={clsx("flex items-center justify-between rounded-t-lg px-3 py-2 text-sm font-bold", d === today ? "bg-brand text-white" : "bg-navy text-white")}>
+              <h2 className={clsx("flex flex-wrap items-center justify-between gap-x-2 rounded-t-lg px-3 py-2 text-sm font-bold", d === today ? "bg-brand text-white" : "bg-navy text-white")}>
                 {WEEKDAYS[d]}{d === today && <span className="rounded-full bg-white/20 px-2 text-[11px] font-semibold">Aujourd&apos;hui</span>}
               </h2>
               <ol className="space-y-2 p-2">

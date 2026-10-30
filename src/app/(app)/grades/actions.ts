@@ -37,13 +37,19 @@ export async function saveAssessment(id: string | null, _: ActionState, fd: Form
   return res;
 }
 
-export async function deleteAssessment(id: string) {
-  const user = await requirePermission("grades.write");
-  const a = await db.assessment.findUniqueOrThrow({ where: { id }, include: { _count: { select: { grades: true } } } });
-  await assertGroupAccess(user, a.groupId);
-  await db.assessment.delete({ where: { id } });
-  await audit(user.id, "assessment.delete", "Group", a.groupId, { assessmentId: id, title: a.title, grades: a._count.grades });
-  redirect(`/grades?group=${a.groupId}`);
+export async function deleteAssessment(id: string): Promise<ActionState> {
+  let groupId = "";
+  const res = await runAction(async () => {
+    const user = await requirePermission("grades.write");
+    const a = await db.assessment.findUnique({ where: { id }, include: { _count: { select: { grades: true } } } });
+    if (!a) throw new BusinessError("Cette évaluation a déjà été supprimée.");
+    await assertGroupAccess(user, a.groupId);
+    await db.assessment.delete({ where: { id } });
+    await audit(user.id, "assessment.delete", "Group", a.groupId, { assessmentId: id, title: a.title, grades: a._count.grades });
+    groupId = a.groupId;
+  });
+  if (res?.ok) redirect(`/grades?group=${groupId}`);
+  return res;
 }
 
 export async function saveGrades(assessmentId: string, _: ActionState, fd: FormData): Promise<ActionState> {

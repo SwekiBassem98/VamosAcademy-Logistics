@@ -109,25 +109,31 @@ async function closeEnrollment(tx: Tx, enrollmentId: string, end: Date, reason: 
   await voidUnpaidInvoices(tx, enrollmentId, next, reason);
 }
 
-export async function archiveStudent(id: string, fd: FormData) {
-  const user = await requirePermission("students.write");
-  const reason = String(fd.get("reason") ?? "").trim();
-  if (reason.length < 3) return { error: "Indiquez le motif de l'archivage." };
-  const now = new Date();
-  await db.$transaction(async (tx) => {
-    const active = await tx.enrollment.findMany({ where: { studentId: id, status: "ACTIVE" }, select: { id: true } });
-    for (const e of active) await closeEnrollment(tx, e.id, now, `Dossier archivé : ${reason}`);
-    await tx.student.update({ where: { id }, data: { status: "ARCHIVE", archivedAt: now } });
-    await audit(user.id, "student.archive", "Student", id, { reason, closedEnrollments: active.length }, tx);
+export async function archiveStudent(id: string, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("students.write");
+    const reason = String(fd.get("reason") ?? "").trim();
+    if (reason.length < 3) throw new BusinessError("Indiquez le motif de l'archivage.");
+    const now = new Date();
+    await db.$transaction(async (tx) => {
+      const active = await tx.enrollment.findMany({ where: { studentId: id, status: "ACTIVE" }, select: { id: true } });
+      for (const e of active) await closeEnrollment(tx, e.id, now, `Dossier archivé : ${reason}`);
+      await tx.student.update({ where: { id }, data: { status: "ARCHIVE", archivedAt: now } });
+      await audit(user.id, "student.archive", "Student", id, { reason, closedEnrollments: active.length }, tx);
+    });
+    revalidatePath(`/students/${id}`);
+    return "Dossier archivé.";
   });
-  revalidatePath(`/students/${id}`);
 }
 
-export async function restoreStudent(id: string) {
-  const user = await requirePermission("students.write");
-  await db.student.update({ where: { id }, data: { status: "ACTIF", archivedAt: null } });
-  await audit(user.id, "student.restore", "Student", id);
-  revalidatePath(`/students/${id}`);
+export async function restoreStudent(id: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("students.write");
+    await db.student.update({ where: { id }, data: { status: "ACTIF", archivedAt: null } });
+    await audit(user.id, "student.restore", "Student", id);
+    revalidatePath(`/students/${id}`);
+    return "Dossier réactivé.";
+  });
 }
 
 export async function addGuardian(studentId: string, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -163,11 +169,16 @@ export async function updateGuardian(studentId: string, guardianId: string, _: A
   });
 }
 
-export async function unlinkGuardian(studentId: string, guardianId: string) {
-  const user = await requirePermission("students.write");
-  await db.studentGuardian.delete({ where: { studentId_guardianId: { studentId, guardianId } } });
-  await audit(user.id, "guardian.unlink", "Student", studentId, { guardianId });
-  revalidatePath(`/students/${studentId}`);
+export async function unlinkGuardian(studentId: string, guardianId: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("students.write");
+    const link = await db.studentGuardian.findUnique({ where: { studentId_guardianId: { studentId, guardianId } } });
+    if (!link) throw new BusinessError("Ce contact a déjà été retiré.");
+    await db.studentGuardian.delete({ where: { studentId_guardianId: { studentId, guardianId } } });
+    await audit(user.id, "guardian.unlink", "Student", studentId, { guardianId });
+    revalidatePath(`/students/${studentId}`);
+    return "Contact retiré.";
+  });
 }
 
 export async function enrollStudent(studentId: string, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -219,18 +230,21 @@ export async function enrollStudent(studentId: string, _: ActionState, fd: FormD
   });
 }
 
-export async function endEnrollment(enrollmentId: string, fd: FormData) {
-  const user = await requirePermission("students.write");
-  const endDate = String(fd.get("endDate") || "");
-  const end = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? parseDay(endDate) : new Date();
-  const e = await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, include: { group: true } });
-  if (e.status !== "ACTIVE") return { error: "Inscription déjà terminée." };
-  if (end < e.startDate) return { error: "La date de sortie précède la date d'entrée." };
-  await db.$transaction(async (tx) => {
-    await closeEnrollment(tx, enrollmentId, end, `Fin d'inscription au ${end.toISOString().slice(0, 10)}`);
-    await audit(user.id, "enrollment.end", "Student", e.studentId, { enrollmentId, group: e.group.name, endDate: end.toISOString().slice(0, 10) }, tx);
+export async function endEnrollment(enrollmentId: string, fd: FormData): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("students.write");
+    const endDate = String(fd.get("endDate") || "");
+    const end = /^\d{4}-\d{2}-\d{2}$/.test(endDate) ? parseDay(endDate) : new Date();
+    const e = await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, include: { group: true } });
+    if (e.status !== "ACTIVE") throw new BusinessError("Inscription déjà terminée.");
+    if (end < e.startDate) throw new BusinessError("La date de sortie précède la date d'entrée.");
+    await db.$transaction(async (tx) => {
+      await closeEnrollment(tx, enrollmentId, end, `Fin d'inscription au ${end.toISOString().slice(0, 10)}`);
+      await audit(user.id, "enrollment.end", "Student", e.studentId, { enrollmentId, group: e.group.name, endDate: end.toISOString().slice(0, 10) }, tx);
+    });
+    revalidatePath(`/students/${e.studentId}`);
+    return "Inscription terminée.";
   });
-  revalidatePath(`/students/${e.studentId}`);
 }
 
 /** Modifie le tarif / l'échéancier d'une inscription (échéances futures non payées annulées puis régénérées). */

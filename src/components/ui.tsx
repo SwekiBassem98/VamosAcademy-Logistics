@@ -211,7 +211,8 @@ export function Td({ className, cell, ...p }: ComponentProps<"td"> & { cell?: Ce
   return (
     <td
       data-cell={cell === "num" ? undefined : cell}
-      className={clsx("px-4 py-3 align-middle lg:whitespace-nowrap", cell === "num" && "tabular-nums lg:text-right", cell === "wide" && "lg:whitespace-normal", className)}
+      // Colonne « wide » (texte long : message, motif…) : retour à la ligne et largeur minimale, jamais de débordement sur les voisines
+      className={clsx("px-4 py-3 align-middle", cell === "wide" ? "break-words lg:min-w-[18rem] lg:whitespace-normal" : "lg:whitespace-nowrap", cell === "num" && "tabular-nums lg:text-right", className)}
       {...p}
     />
   );
@@ -244,11 +245,12 @@ export function Stat({ label, value, hint, tone = "navy", href, icon }: {
   const body = (
     <>
       <p className="flex items-center gap-1.5 text-xs font-semibold text-muted">{icon && <span aria-hidden className="text-faint [&_svg]:size-3.5">{icon}</span>}{label}</p>
-      <p className={clsx("mt-1.5 font-display text-xl font-extrabold tracking-tight tabular-nums sm:text-2xl", color)}>{value}</p>
+      <p className={clsx("mt-1.5 font-display text-lg font-extrabold tracking-tight tabular-nums @[11rem]:text-xl @[14rem]:text-2xl", color)}>{value}</p>
       {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
     </>
   );
-  const cls = "block min-w-0 rounded-lg border border-line bg-white p-3.5 shadow-xs sm:p-4";
+  // @container : la taille du chiffre suit la largeur de la carte (montants longs dans les grilles étroites)
+  const cls = "@container block min-w-0 rounded-lg border border-line bg-white p-3.5 shadow-xs sm:p-4";
   return href
     ? <Link href={href} className={clsx(cls, "transition hover:border-navy-200 hover:shadow-sm")}>{body}</Link>
     : <div className={cls}>{body}</div>;
@@ -265,17 +267,22 @@ export function EmptyState({ title, text, action, icon }: { title: string; text?
   );
 }
 
-/** Liste « libellé : valeur » ; une colonne sur mobile, deux à partir de sm. */
+/**
+ * Liste « libellé : valeur ». Selon la largeur de SON conteneur (et non de l'écran) : libellé au-dessus de la valeur
+ * dans une carte étroite (colonne latérale, mobile), deux colonnes dès que la carte dépasse ~26 rem.
+ */
 export function DescriptionList({ items, className }: { items: [ReactNode, ReactNode][]; className?: string }) {
   return (
-    <dl className={clsx("grid gap-x-4 gap-y-2.5 text-sm sm:grid-cols-[minmax(0,10rem)_1fr]", className)}>
-      {items.map(([k, v], i) => (
-        <div key={i} className="contents">
-          <dt className="text-xs font-semibold text-muted sm:text-sm sm:font-normal">{k}</dt>
-          <dd className="-mt-2 min-w-0 break-words sm:mt-0">{v}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="@container">
+      <dl className={clsx("grid gap-x-4 gap-y-2.5 text-sm @[26rem]:grid-cols-[minmax(0,9rem)_1fr]", className)}>
+        {items.map(([k, v], i) => (
+          <div key={i} className="contents">
+            <dt className="text-xs font-semibold text-muted @[26rem]:text-sm @[26rem]:font-normal">{k}</dt>
+            <dd className="-mt-2 min-w-0 break-words @[26rem]:mt-0">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 

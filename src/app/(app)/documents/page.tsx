@@ -57,8 +57,8 @@ export default async function Documents() {
           <Doc icon={<ClipboardList />} title="Feuille de présence" text="Grille du mois (élèves × séances prévues) : vierge pour l'appel papier, ou remplie avec les appels enregistrés.">
             <form action="/documents/attendance-sheet" className="grid gap-2">
               {groupSelect}
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]"><input type="month" name="month" defaultValue={month} className="input" aria-label="Mois" />
-                <select name="mode" className="input" aria-label="Type"><option value="filled">Remplie</option><option value="blank">Vierge</option></select><div className="col-span-2 sm:col-span-1 [&>button]:w-full">{btn}</div></div>
+              <div className="grid grid-cols-2 gap-2"><input type="month" name="month" defaultValue={month} className="input min-w-0" aria-label="Mois" />
+                <select name="mode" className="input" aria-label="Type"><option value="filled">Remplie</option><option value="blank">Vierge</option></select><div className="col-span-2 [&>button]:w-full">{btn}</div></div>
             </form>
           </Doc>
         )}

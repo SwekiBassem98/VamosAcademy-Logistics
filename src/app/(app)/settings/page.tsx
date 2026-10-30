@@ -1,4 +1,4 @@
-import { Card, PageHeader, SectionTitle, Forbidden, Badge, Button, Callout } from "@/components/ui";
+import { Card, PageHeader, SectionTitle, Forbidden, Badge, Callout } from "@/components/ui";
 import { Form, Input, Submit, Textarea } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
 import { SettingsTabs } from "./tabs";
@@ -83,7 +83,7 @@ export default async function Settings() {
           const set = new Set(y.billingMonths);
           return (
             <Card key={y.id} title={<span className="flex items-center gap-2">{y.label} {y.active && <Badge tone="green">active</Badge>}</span>}
-              actions={!y.active && <form action={activateYear.bind(null, y.id)}><Button type="submit" variant="secondary" size="sm">Activer cette année</Button></form>}>
+              actions={!y.active && <Form action={activateYear.bind(null, y.id)}><Submit variant="secondary" size="sm">Activer cette année</Submit></Form>}>
               <p className="mb-3 text-sm text-muted">Du {formatDate(y.startDate)} au {formatDate(y.endDate)}</p>
               <Form action={updateYearBilling.bind(null, y.id)} className="space-y-3">
                 <fieldset>

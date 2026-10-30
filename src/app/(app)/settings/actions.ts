@@ -33,7 +33,7 @@ export async function createSchoolYear(_: ActionState, fd: FormData): Promise<Ac
       data: { label: v.label, startDate: parseDay(v.startDate), endDate: parseDay(v.endDate), dueDay: v.dueDay, billingMonths: defaultBillingMonths(startYear) },
     });
     await audit(user.id, "schoolYear.create", "SchoolYear", y.id, v);
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return "Année scolaire créée (mois facturés : septembre → juin).";
   });
 }
@@ -47,19 +47,22 @@ export async function updateYearBilling(id: string, _: ActionState, fd: FormData
     if (!(dueDay >= 1 && dueDay <= 28)) throw new BusinessError("Jour limite entre 1 et 28.");
     await db.schoolYear.update({ where: { id }, data: { billingMonths: months, dueDay } });
     await audit(user.id, "schoolYear.update", "SchoolYear", id, { months, dueDay });
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return "Facturation mise à jour (s'applique aux nouvelles échéances).";
   });
 }
 
-export async function activateYear(id: string) {
-  const user = await requirePermission("settings.manage");
-  await db.$transaction([
-    db.schoolYear.updateMany({ data: { active: false } }),
-    db.schoolYear.update({ where: { id }, data: { active: true } }),
-  ]);
-  await audit(user.id, "schoolYear.activate", "SchoolYear", id);
-  revalidatePath("/", "layout");
+export async function activateYear(id: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("settings.manage");
+    await db.$transaction([
+      db.schoolYear.updateMany({ data: { active: false } }),
+      db.schoolYear.update({ where: { id }, data: { active: true } }),
+    ]);
+    await audit(user.id, "schoolYear.activate", "SchoolYear", id);
+    revalidatePath("/", "layout");
+    return "Année activée.";
+  });
 }
 
 export async function generateInvoices(id: string): Promise<ActionState> {
@@ -79,7 +82,7 @@ export async function saveDiscountType(id: string | null, _: ActionState, fd: Fo
       ? await db.discountType.update({ where: { id }, data: { ...v, active } })
       : await db.discountType.create({ data: v });
     await audit(user.id, id ? "discount.update" : "discount.create", "DiscountType", d.id, { ...v, active });
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return "Réduction enregistrée. (Les inscriptions existantes conservent leur tarif.)";
   });
 }
@@ -110,16 +113,21 @@ export async function saveFeeRule(_: ActionState, fd: FormData): Promise<ActionS
     const data = { ...key, monthlyFee: v.monthlyFee, registrationFee: v.registrationFee ?? 0 };
     const rule = existing ? await db.feeRule.update({ where: { id: existing.id }, data }) : await db.feeRule.create({ data });
     await audit(user.id, existing ? "fee.update" : "fee.create", "FeeRule", rule.id, data);
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return existing ? "Tarif mis à jour (les groupes existants gardent leur tarif)." : "Tarif ajouté à la grille.";
   });
 }
 
-export async function deleteFeeRule(id: string) {
-  const user = await requirePermission("settings.manage");
-  const r = await db.feeRule.delete({ where: { id } });
-  await audit(user.id, "fee.delete", "FeeRule", id, { monthlyFee: r.monthlyFee, levelId: r.levelId, subjectId: r.subjectId, cycleId: r.cycleId });
-  revalidatePath("/settings");
+export async function deleteFeeRule(id: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("settings.manage");
+    const r = await db.feeRule.findUnique({ where: { id } });
+    if (!r) throw new BusinessError("Ce tarif a déjà été retiré.");
+    await db.feeRule.delete({ where: { id } });
+    await audit(user.id, "fee.delete", "FeeRule", id, { monthlyFee: r.monthlyFee, levelId: r.levelId, subjectId: r.subjectId, cycleId: r.cycleId });
+    revalidatePath("/settings", "layout");
+    return "Tarif retiré de la grille.";
+  });
 }
 
 export async function savePaymentMode(id: string | null, _: ActionState, fd: FormData): Promise<ActionState> {
@@ -136,7 +144,7 @@ export async function savePaymentMode(id: string | null, _: ActionState, fd: For
       ? await db.paymentMode.update({ where: { id }, data: { label: v.label, requiresReference: v.requiresReference, active } })
       : await db.paymentMode.create({ data: { ...v, order } });
     await audit(user.id, id ? "paymentMode.update" : "paymentMode.create", "PaymentMode", m.id, { ...v, active });
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return "Moyen de paiement enregistré.";
   });
 }
@@ -148,7 +156,7 @@ export async function saveTemplate(id: string, _: ActionState, fd: FormData): Pr
     const active = fd.get("active") === "on";
     await db.messageTemplate.update({ where: { id }, data: { ...v, active } });
     await audit(user.id, "template.update", "MessageTemplate", id, { ...v, active });
-    revalidatePath("/settings");
+    revalidatePath("/settings", "layout");
     return "Modèle enregistré.";
   });
 }

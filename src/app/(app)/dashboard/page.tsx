@@ -202,8 +202,8 @@ export default async function Dashboard() {
                       <span className="w-14 shrink-0 font-display text-sm font-bold text-navy tabular-nums">{formatMinutes(s.startMin)}<span className="block text-xs font-medium text-muted">{formatMinutes(s.endMin)}</span></span>
                       <span aria-hidden className="h-9 w-1 shrink-0 rounded-full" style={{ background: s.group.subject.color }} />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-ink">{s.group.name}</span>
-                        <span className="block truncate text-xs text-muted">{s.room.name}{s.group.teacher && ` · ${s.group.teacher.lastName}`}</span>
+                        <span className="block line-clamp-2 break-words font-semibold text-ink">{s.group.name}</span>
+                        <span className="block line-clamp-2 break-words text-xs text-muted">{s.room.name}{s.group.teacher && ` · ${s.group.teacher.lastName}`}</span>
                       </span>
                       {sess ? <Badge tone={absent ? "amber" : "green"}>{absent ? `${absent} absent(s)` : "appel fait"}</Badge> : <Badge tone="red" dot>à faire</Badge>}
                     </>
@@ -241,7 +241,7 @@ export default async function Dashboard() {
                     <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">{WEEKDAYS[weekdayOf(u.date)]} {formatDate(u.date).slice(0, 5)}</p>
                     <ul className="space-y-1.5 text-sm">
                       {u.slots.slice(0, 5).map((s) => (
-                        <li key={s.id} className="flex gap-2"><span className="w-11 shrink-0 font-semibold tabular-nums text-navy">{formatMinutes(s.startMin)}</span><span className="truncate">{s.group.name}</span></li>
+                        <li key={s.id} className="flex gap-2"><span className="w-11 shrink-0 font-semibold tabular-nums text-navy">{formatMinutes(s.startMin)}</span><span className="min-w-0 break-words">{s.group.name}</span></li>
                       ))}
                       {u.slots.length > 5 && <li className="text-xs text-muted">+ {u.slots.length - 5} autre(s)</li>}
                     </ul>
@@ -273,8 +273,8 @@ export default async function Dashboard() {
                   {recentAbsences.map((a) => (
                     <li key={a.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
                       <span className="min-w-0 flex-1">
-                        <Link href={`/students/${a.studentId}`} className="block truncate font-medium text-ink hover:text-brand">{a.student.lastName} {a.student.firstName}</Link>
-                        <span className="block truncate text-xs text-muted">{formatDate(a.session.date)} · {a.session.group.name}</span>
+                        <Link href={`/students/${a.studentId}`} className="block line-clamp-2 break-words font-medium text-ink hover:text-brand">{a.student.lastName} {a.student.firstName}</Link>
+                        <span className="block line-clamp-2 break-words text-xs text-muted">{formatDate(a.session.date)} · {a.session.group.name}</span>
                       </span>
                       <Badge tone={a.status === "EXCUSE" ? "blue" : a.note ? "amber" : "red"}>{a.status === "EXCUSE" ? "excusé" : a.note ? "motif" : "à justifier"}</Badge>
                     </li>
@@ -303,7 +303,7 @@ export default async function Dashboard() {
               <ul className="space-y-2 text-sm">
                 {[...teachers.values()].sort((a, b) => (a.held / a.planned) - (b.held / b.planned)).slice(0, 6).map((t) => (
                   <li key={t.name} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{t.name}</span>
+                    <span className="min-w-0 break-words">{t.name}</span>
                     <Badge tone={t.held >= t.planned ? "green" : t.held === 0 ? "red" : "amber"}>{t.held}/{t.planned}</Badge>
                   </li>
                 ))}
@@ -367,7 +367,7 @@ async function UnpaidCard({ yearId, user }: { yearId: string; user: CurrentUser 
           {unpaid.slice(0, 5).map((u) => (
             <li key={u.student.id} className="flex items-center gap-3 px-4 py-2.5 text-sm sm:px-5">
               <span className="min-w-0 flex-1">
-                <Link href={`/students/${u.student.id}`} className="block truncate font-medium text-ink hover:text-brand">{u.student.lastName} {u.student.firstName}</Link>
+                <Link href={`/students/${u.student.id}`} className="block line-clamp-2 break-words font-medium text-ink hover:text-brand">{u.student.lastName} {u.student.firstName}</Link>
                 <span className="block text-xs text-muted">{u.count} échéance(s) · depuis le {formatDate(u.oldest)}</span>
               </span>
               <span className="text-right">
@@ -413,7 +413,7 @@ async function RecentPayments() {
             <li key={p.id}>
               <Link href={`/payments/${p.id}`} className="flex items-center gap-3 px-4 py-2.5 text-sm transition hover:bg-surface sm:px-5">
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium text-ink">{p.student.lastName} {p.student.firstName}</span>
+                  <span className="block line-clamp-2 break-words font-medium text-ink">{p.student.lastName} {p.student.firstName}</span>
                   <span className="block text-xs text-muted">{formatDate(p.paidAt)} · {p.mode.label}</span>
                 </span>
                 <span className="font-bold tabular-nums text-success-600">{formatMoney(p.amount)}</span>

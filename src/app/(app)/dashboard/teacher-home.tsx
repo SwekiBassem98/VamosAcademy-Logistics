@@ -107,8 +107,8 @@ export async function TeacherHome({ user, yearLabel }: { user: CurrentUser; year
                         <span className="w-14 shrink-0 font-display text-sm font-bold text-navy tabular-nums">{formatMinutes(o.startMin)}<span className="block text-xs font-medium text-muted">{formatMinutes(o.endMin)}</span></span>
                         <span aria-hidden className="h-10 w-1 shrink-0 rounded-full" style={{ background: o.cls.subject.color }} />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-semibold text-ink">{o.cls.name}</span>
-                          <span className="block truncate text-xs text-muted">{o.room} · {o.cls.students} élève{o.cls.students > 1 ? "s" : ""}</span>
+                          <span className="block line-clamp-2 break-words font-semibold text-ink">{o.cls.name}</span>
+                          <span className="block line-clamp-2 break-words text-xs text-muted">{o.room} · {o.cls.students} élève{o.cls.students > 1 ? "s" : ""}</span>
                         </span>
                         {done ? <Badge tone={absent ? "amber" : "green"}>{absent ? `${absent} absent${absent > 1 ? "s" : ""}` : "appel fait"}</Badge>
                           : future ? <Badge tone="blue">à venir</Badge> : <Badge tone="red" dot>appel à faire</Badge>}
@@ -163,7 +163,7 @@ export async function TeacherHome({ user, yearLabel }: { user: CurrentUser; year
                 <li key={`${o.slotId}:${o.date.toISOString()}`}>
                   <Link href={`/attendance?group=${o.cls.id}&date=${todayISO(o.date)}`} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-surface sm:px-5">
                     <ClipboardCheck aria-hidden className="size-4 shrink-0 text-brand" />
-                    <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">Appel {o.cls.name}</span><span className="text-xs text-muted">{WEEKDAYS[o.weekday]} {formatDate(o.date).slice(0, 5)} · {formatMinutes(o.startMin)}</span></span>
+                    <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-medium text-ink">Appel {o.cls.name}</span><span className="text-xs text-muted">{WEEKDAYS[o.weekday]} {formatDate(o.date).slice(0, 5)} · {formatMinutes(o.startMin)}</span></span>
                   </Link>
                 </li>
               ))}
@@ -171,7 +171,7 @@ export async function TeacherHome({ user, yearLabel }: { user: CurrentUser; year
                 <li key={a.id}>
                   <Link href={`/grades?group=${a.groupId}&a=${a.id}`} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-surface sm:px-5">
                     <NotebookPen aria-hidden className="size-4 shrink-0 text-warning-600" />
-                    <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">Notes : {a.title}</span><span className="text-xs text-muted">{a.group.name} · {a._count.grades} note(s) saisie(s)</span></span>
+                    <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-medium text-ink">Notes : {a.title}</span><span className="text-xs text-muted">{a.group.name} · {a._count.grades} note(s) saisie(s)</span></span>
                   </Link>
                 </li>
               ))}
@@ -186,7 +186,7 @@ export async function TeacherHome({ user, yearLabel }: { user: CurrentUser; year
                   <li key={a.id}>
                     <Link href={`/students/${a.student.id}`} className="flex min-h-12 items-center gap-3 px-4 py-2 hover:bg-surface sm:px-5">
                       <UserX aria-hidden className="size-4 shrink-0 text-faint" />
-                      <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">{a.student.lastName} {a.student.firstName}</span><span className="text-xs text-muted">{formatDate(a.session.date)} · {a.session.group.name}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-medium text-ink">{a.student.lastName} {a.student.firstName}</span><span className="text-xs text-muted">{formatDate(a.session.date)} · {a.session.group.name}</span></span>
                       <Badge tone={a.note ? "gray" : "amber"}>{a.note ? "justifiée" : "à justifier"}</Badge>
                     </Link>
                   </li>

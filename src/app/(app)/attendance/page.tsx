@@ -74,7 +74,7 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
                     <Link href={`/attendance?group=${g.id}&date=${date}`} className="flex min-h-16 items-center gap-3 px-4 py-3 transition hover:bg-surface sm:px-5">
                       <span className="w-14 shrink-0 font-display text-sm font-bold text-navy tabular-nums">{formatMinutes(s.startMin)}<span className="block text-xs font-medium text-muted">{formatMinutes(s.endMin)}</span></span>
                       <span aria-hidden className="h-10 w-1 shrink-0 rounded-full" style={{ background: g.subject.color }} />
-                      <span className="min-w-0 flex-1"><span className="block truncate font-semibold text-ink">{g.name}</span><span className="block text-xs text-muted">{s.room.name}</span></span>
+                      <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-semibold text-ink">{g.name}</span><span className="block text-xs text-muted">{s.room.name}</span></span>
                       <span className="flex flex-col items-end gap-1">
                         {sess ? <Badge tone={abs ? "amber" : "green"}>{abs ? `${abs} absent(s)` : "appel fait"}</Badge> : <Badge tone="red" dot>à faire</Badge>}
                         <span className="text-xs font-semibold text-brand max-sm:hidden">{sess ? "Voir" : write ? "Faire l'appel" : "Voir"} →</span>

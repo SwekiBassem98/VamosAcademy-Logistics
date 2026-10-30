@@ -66,9 +66,14 @@ export async function addAvailability(teacherId: string, _: ActionState, fd: For
   });
 }
 
-export async function deleteAvailability(id: string) {
-  const user = await requirePermission("teachers.write");
-  const a = await db.teacherAvailability.delete({ where: { id } });
-  await audit(user.id, "teacher.availability.delete", "Teacher", a.teacherId, { weekday: a.weekday, startMin: a.startMin, endMin: a.endMin });
-  revalidatePath(`/teachers/${a.teacherId}`);
+export async function deleteAvailability(id: string): Promise<ActionState> {
+  return runAction(async () => {
+    const user = await requirePermission("teachers.write");
+    const a = await db.teacherAvailability.findUnique({ where: { id } });
+    if (!a) throw new BusinessError("Cette disponibilité a déjà été retirée.");
+    await db.teacherAvailability.delete({ where: { id } });
+    await audit(user.id, "teacher.availability.delete", "Teacher", a.teacherId, { weekday: a.weekday, startMin: a.startMin, endMin: a.endMin });
+    revalidatePath(`/teachers/${a.teacherId}`);
+    return "Disponibilité retirée.";
+  });
 }

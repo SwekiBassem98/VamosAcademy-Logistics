@@ -72,8 +72,8 @@ export async function TeacherStudent({ user, id }: { user: CurrentUser; id: stri
             <ul className="divide-y divide-line text-sm">
               {grades.map((g) => (
                 <li key={g.id} className="flex min-h-12 items-center gap-3 px-4 py-2 sm:px-5">
-                  <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">{g.assessment.title}</span>
-                    <span className="block truncate text-xs text-muted">{KIND_LABEL[g.assessment.kind]} · {formatDate(g.assessment.date)} · {g.assessment.group.name}</span>
+                  <span className="min-w-0 flex-1"><span className="block line-clamp-2 break-words font-medium text-ink">{g.assessment.title}</span>
+                    <span className="block break-words text-xs text-muted">{KIND_LABEL[g.assessment.kind]} · {formatDate(g.assessment.date)} · {g.assessment.group.name}</span>
                     {g.comment && <span className="mt-0.5 block text-xs italic text-muted">« {g.comment} »</span>}</span>
                   <span className="font-semibold tabular-nums text-navy">{g.score == null ? "abs." : `${formatScore(g.score)}/${g.assessment.maxScore}`}</span>
                 </li>
@@ -86,7 +86,7 @@ export async function TeacherStudent({ user, id }: { user: CurrentUser; id: stri
             <ul className="divide-y divide-line text-sm">
               {attendance.map((a) => (
                 <li key={a.id} className="flex min-h-12 items-center gap-3 px-4 py-2 sm:px-5">
-                  <span className="min-w-0 flex-1"><span className="block font-medium text-ink">{formatDate(a.session.date)}</span><span className="block truncate text-xs text-muted">{a.session.group.name}{a.note && ` · ${a.note}`}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block font-medium text-ink">{formatDate(a.session.date)}</span><span className="block break-words text-xs text-muted">{a.session.group.name}{a.note && ` · ${a.note}`}</span></span>
                   <Badge tone={ATT_TONE[a.status]}>{ATTENDANCE_LABEL[a.status]}</Badge>
                 </li>
               ))}
