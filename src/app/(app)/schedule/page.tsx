@@ -53,7 +53,9 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
   return (
     <>
       <div className="no-print">
-        <PageHeader title="Emploi du temps" subtitle="Créneaux hebdomadaires de l'année active. Les créneaux se gèrent depuis la fiche de chaque groupe." actions={<PrintButton auto={sp.print === "1"} />} />
+        {user.role === "ENSEIGNANT"
+          ? <PageHeader title="Mon emploi du temps" subtitle="Vos cours de la semaine. Aujourd'hui, touchez un cours pour faire l'appel. Un changement d'horaire ou de salle ? L'administration s'en charge." actions={<PrintButton auto={sp.print === "1"} />} />
+          : <PageHeader title="Emploi du temps" subtitle="Créneaux hebdomadaires de l'année active. Les créneaux se gèrent depuis la fiche de chaque groupe." actions={<PrintButton auto={sp.print === "1"} />} />}
         {user.role !== "ENSEIGNANT" && (
           <FilterBar params={sp} keep={[]}>
             <select name="room" defaultValue={sp.room ?? ""} className="input md:w-48" aria-label="Salle">
@@ -66,7 +68,7 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
             </select>
           </FilterBar>
         )}
-        {conflictCount > 0 && <Callout tone="danger" className="mb-4">{conflictCount} créneau(x) en conflit (même salle ou même enseignant au même moment) : corrigez-les depuis la fiche du groupe.</Callout>}
+        {conflictCount > 0 && user.role !== "ENSEIGNANT" && <Callout tone="danger" className="mb-4">{conflictCount} créneau(x) en conflit (même salle ou même enseignant au même moment) : corrigez-les depuis la fiche du groupe.</Callout>}
       </div>
       <div className="mb-4 hidden print:block">
         <DocHeader title="Emploi du temps" lines={[

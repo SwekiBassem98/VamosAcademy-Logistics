@@ -204,7 +204,7 @@ export const schoolYearSchema = z.object({
 export const userSchema = z.object({
   fullName: req("Nom complet"),
   email: req("E-mail").email("E-mail invalide").toLowerCase(),
-  role: z.enum(["ADMIN", "RESPONSABLE", "COMPTABLE", "ENSEIGNANT", "LECTURE"]),
+  role: z.enum(["ADMIN", "RESPONSABLE", "COMPTABLE", "ENSEIGNANT", "LECTURE"], { error: "Choisissez un rôle" }),
   teacherId: opt,
   password: opt.refine((v) => !v || strongPassword(v), "Mot de passe : 10 caractères min., avec lettres et chiffres"),
 });

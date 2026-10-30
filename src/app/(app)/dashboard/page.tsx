@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { CalendarClock, CircleAlert, ClipboardCheck, DoorOpen, GraduationCap, UserPlus, Users, Wallet } from "lucide-react";
 import { Card, CardLink, PageHeader, Stat, Badge, LinkButton, EmptyState, Callout, Skeleton } from "@/components/ui";
 import { BarChart, HBars } from "@/components/charts";
+import { TeacherHome } from "./teacher-home";
 import { requireUser, type CurrentUser } from "@/server/auth";
 import { db } from "@/server/db";
 import { groupScope, studentScope } from "@/server/scope";
@@ -44,9 +45,10 @@ export default async function Dashboard() {
       </>
     );
   }
+  // Enseignant : espace dédié (ses classes, son emploi du temps, ses appels), sans indicateurs du centre
+  if (user.role === "ENSEIGNANT") return <TeacherHome user={user} yearLabel={year.label} />;
   const finance = can(user.role, "dashboard.finance");
   const att = can(user.role, "attendance.read");
-  const teacherView = user.role === "ENSEIGNANT";
   const today = todayISO();
   const todayDate = parseDay(today);
   const weekday = weekdayOf(todayDate);
@@ -89,7 +91,7 @@ export default async function Dashboard() {
     can(user.role, "audit.read")
       ? db.auditLog.findMany({ where: { action: { not: "user.login" } }, include: { user: { select: { fullName: true } } }, orderBy: { createdAt: "desc" }, take: 6 })
       : [],
-    can(user.role, "teachers.read") && !teacherView
+    can(user.role, "teachers.read")
       ? db.attendanceSession.findMany({ where: { date: { gte: monday, lte: todayDate }, group: { schoolYearId: year.id } }, select: { group: { select: { teacherId: true } } } })
       : [],
   ]);
@@ -133,7 +135,7 @@ export default async function Dashboard() {
   }
   // Enseignants : séances tenues cette semaine / séances prévues jusqu'à aujourd'hui
   const teachers = new Map<string, { name: string; planned: number; held: number }>();
-  if (!teacherView && can(user.role, "teachers.read")) {
+  if (can(user.role, "teachers.read")) {
     for (const s of slots) {
       if (!s.group.teacher || s.weekday > weekday) continue;
       const t = teachers.get(s.group.teacher.id) ?? { name: `${s.group.teacher.lastName} ${s.group.teacher.firstName[0]}.`, planned: 0, held: 0 };
@@ -160,8 +162,7 @@ export default async function Dashboard() {
       <PageHeader
         title={`${hello()} ${user.fullName}`}
         subtitle={<>Année scolaire {year.label} · <span className="capitalize">{WEEKDAYS[weekday].toLowerCase()}</span> {formatDate(new Date())}</>}
-        primary={can(user.role, "payments.write") ? <LinkButton href="/payments/new"><Wallet /> Encaisser</LinkButton>
-          : teacherView ? <LinkButton href="/attendance"><ClipboardCheck /> Appels du jour</LinkButton> : undefined}
+        primary={can(user.role, "payments.write") ? <LinkButton href="/payments/new"><Wallet /> Encaisser</LinkButton> : undefined}
         actions={can(user.role, "students.write") && <LinkButton href="/students/new" variant="secondary"><UserPlus /> Nouvel élève</LinkButton>}
       />
       {demo && demo.total > 0 && (
@@ -174,7 +175,7 @@ export default async function Dashboard() {
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:gap-6">
         {/* Indicateurs clés */}
         <div className="grid grid-cols-2 gap-3 max-lg:order-3 sm:gap-4 lg:col-span-3 lg:grid-cols-4">
-          <Stat icon={<Users />} label={teacherView ? "Mes élèves" : "Élèves actifs"} value={activeStudents} hint={`${enrollments} inscription(s) en cours`} href={can(user.role, "students.read") ? "/students" : undefined} />
+          <Stat icon={<Users />} label="Élèves actifs" value={activeStudents} hint={`${enrollments} inscription(s) en cours`} href={can(user.role, "students.read") ? "/students" : undefined} />
           <Stat icon={<UserPlus />} label="Nouvelles inscriptions" value={newEnrollments} hint="sur 30 jours" />
           {finance ? (
             <Suspense fallback={<><StatSkeleton /><StatSkeleton /></>}><FinanceStats yearId={year.id} /></Suspense>
@@ -202,7 +203,7 @@ export default async function Dashboard() {
                       <span aria-hidden className="h-9 w-1 shrink-0 rounded-full" style={{ background: s.group.subject.color }} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-semibold text-ink">{s.group.name}</span>
-                        <span className="block truncate text-xs text-muted">{s.room.name}{s.group.teacher && !teacherView && ` · ${s.group.teacher.lastName}`}</span>
+                        <span className="block truncate text-xs text-muted">{s.room.name}{s.group.teacher && ` · ${s.group.teacher.lastName}`}</span>
                       </span>
                       {sess ? <Badge tone={absent ? "amber" : "green"}>{absent ? `${absent} absent(s)` : "appel fait"}</Badge> : <Badge tone="red" dot>à faire</Badge>}
                     </>
@@ -291,7 +292,7 @@ export default async function Dashboard() {
             </Card>
           )}
 
-          {rooms.size > 0 && !teacherView && (
+          {rooms.size > 0 && (
             <Card title="Salles aujourd'hui" description="Temps occupé sur une journée de 12 h" className="max-lg:order-10" actions={<DoorOpen className="size-4 text-faint" aria-hidden />}>
               <HBars unit="count" rows={[...rooms.entries()].sort((a, b) => b[1].minutes - a[1].minutes).map(([label, r]) => ({ label, value: r.minutes, max: OPEN_MIN, display: `${r.count} cours · ${Math.round((r.minutes / OPEN_MIN) * 100)} %` }))} />
             </Card>

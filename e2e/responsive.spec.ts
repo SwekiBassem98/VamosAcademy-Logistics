@@ -157,7 +157,7 @@ test("chaque rôle : onglets mobiles adaptés et pages interdites refusées", as
     [ADMIN.email, ADMIN.password, ["Accueil", "Élèves", "Appels", "Caisse"], [], "/nope-404"],
     [`responsable@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Élèves", "Appels", "Caisse"], [], "/settings"],
     [`comptable@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Caisse", "Impayés", "Dépenses"], ["Appels"], "/attendance"],
-    [`enseignant@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Appels", "Notes", "Agenda"], ["Caisse"], "/payments"],
+    [`enseignant@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Classes", "Appels", "Agenda"], ["Caisse", "Élèves"], "/payments"],
     [`lecture@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Élèves", "Agenda", "Appels"], ["Caisse"], "/students/new"],
   ];
   for (const [email, pwd, tabs, absent, forbidden] of cases) {
@@ -170,6 +170,39 @@ test("chaque rôle : onglets mobiles adaptés et pages interdites refusées", as
       await page.goto(forbidden);
       await expect(page.getByText("Accès refusé")).toBeVisible();
     }
+    await page.context().close();
+  }
+});
+
+test("enseignant : espace dédié, ses classes et ses élèves, sans données administratives", async ({ browser }) => {
+  for (const width of [390, 1280]) {
+    const page = await newPage(browser, width);
+    await login(page, "enseignant@demo.vamos-academy.tn", DEMO_PWD);
+    await expect(page.getByText(/Prochain cours|Aucun cours programmé/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Mes classes" })).toBeVisible();
+    // Aucun indicateur du centre ni donnée financière
+    for (const t of ["Remplissage par cycle", "Nouvelles inscriptions", "Encaisser", "DT"]) await expect(page.getByText(t, { exact: false })).toHaveCount(0);
+    expect(await overflow(page)).toBeLessThanOrEqual(0);
+
+    // Les listes administratives mènent à « Mes classes »
+    await page.goto("/students");
+    await expect(page).toHaveURL(/\/classes$/);
+    await page.goto("/academics");
+    await expect(page).toHaveURL(/\/classes$/);
+
+    // Classe : élèves, appel, notes ; pas de mensualité
+    await page.locator('a[href^="/classes/c"]').first().click();
+    await expect(page.getByRole("heading", { name: "Mes élèves" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Faire l'appel|Revoir l'appel/ })).toBeVisible();
+    await expect(page.getByText(/\/ mois|DT/)).toHaveCount(0);
+    expect(await overflow(page)).toBeLessThanOrEqual(0);
+
+    // Fiche élève : utile en cours, sans matricule, adresse ni finances
+    await page.locator('a[href^="/students/c"]').first().click();
+    await expect(page.getByText("Contact en cas d'urgence")).toBeVisible();
+    await expect(page.getByText("Assiduité dans mes cours")).toBeVisible();
+    for (const t of ["VA-2026-", "Relevé de compte", "Reste à payer", "Fiche d'inscription", "Historique"]) await expect(page.getByText(t, { exact: false })).toHaveCount(0);
+    expect(await overflow(page)).toBeLessThanOrEqual(0);
     await page.context().close();
   }
 });

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Card, PageHeader, Table, Td, Badge, Forbidden, LinkButton, DemoBadge, Phone } from "@/components/ui";
 import { Form, Input, Select, Submit, Checkbox } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
@@ -19,6 +19,7 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   const user = await pageUser("academics.read");
   if (!user) return <Forbidden />;
   const { id } = await params;
+  if (user.role === "ENSEIGNANT") redirect(`/classes/${id}`);
   if (!(await canAccessGroup(user, id))) return <Forbidden />;
   const g = await db.group.findUnique({
     where: { id },

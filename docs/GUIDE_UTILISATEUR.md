@@ -8,7 +8,7 @@ n'y a pas accès.
 | Administrateur | Tout, dont les utilisateurs, paramètres et la suppression des données de démonstration |
 | Responsable administratif | Élèves, parents, inscriptions, groupes, emplois du temps, présences, encaissements, messages |
 | Comptable | Paiements (dont annulation et correction), dépenses, rémunérations, rapports, messages |
-| Enseignant | Ses groupes : listes, appel, notes et appréciations |
+| Enseignant | Son espace : emploi du temps, ses classes et ses élèves, appel, notes et appréciations (aucune donnée financière ni administrative) |
 | Lecture seule | Consultation des élèves, groupes, présences et notes |
 
 ## 1. Connexion et mot de passe
@@ -24,7 +24,7 @@ n'y a pas accès.
 
 - **Sur ordinateur** : menu complet à gauche, recherche, cloche et compte en haut.
 - **Sur téléphone et tablette** : une barre d'onglets en bas donne accès d'un geste aux 4 écrans les plus utiles pour votre rôle
-  (par exemple *Accueil, Élèves, Appels, Caisse* pour l'administration, *Accueil, Appels, Notes, Agenda* pour un enseignant) ;
+  (par exemple *Accueil, Élèves, Appels, Caisse* pour l'administration, *Accueil, Classes, Appels, Agenda* pour un enseignant) ;
   l'onglet **Menu** ouvre tous les modules autorisés, avec un champ de recherche. La loupe en haut ouvre la recherche plein écran.
 - Le tableau de bord commence par **Aujourd'hui** (séances du jour et appels à faire) et **À traiter** (notifications, absences à
   justifier, messages, justificatifs, pré-inscriptions), puis les chiffres clés, les retards de paiement, les absences récentes,
@@ -100,6 +100,24 @@ texte ou ouvrez WhatsApp, envoyez, puis cochez les messages et cliquez *Marquer 
 *Documents* regroupe : listes par groupe ou par niveau, feuilles de présence (vierges ou remplies), emploi du temps, synthèse
 pédagogique, reçus, état des impayés, rapports financiers, fiches de rémunération. Tous portent l'en-tête officiel du centre et
 la date d'édition. Les listes s'exportent en CSV ou Excel.
+
+## 9 bis. Espace enseignant
+
+Un enseignant connecté ne voit que **son espace**, jamais les pages d'administration :
+
+- **Mon espace** (accueil) : prochain cours (heure, salle, nombre d'élèves, compte à rebours), séances du jour avec l'état de
+  l'appel, appels de la semaine, notes à saisir, absences récentes de ses élèves, ses classes, ses 7 prochains jours et le
+  téléphone de l'administration.
+- **Mes classes** : une carte par groupe ; dans une classe, la liste des élèves avec leur assiduité et leur moyenne dans
+  *cette* classe, les derniers appels, les évaluations et les documents à imprimer (liste, feuille d'appel vierge, synthèse).
+- **Fiche élève** : classes communes, assiduité et notes dans ses cours, remarque médicale et contact d'urgence du parent.
+  Ni matricule, ni adresse, ni paiements, ni historique administratif.
+- **Mon emploi du temps**, **Appels**, **Notes**, **Notifications** (absences de ses élèves) et **Documents**.
+
+**Créer l'accès d'un enseignant** : *Enseignants* → fiche de l'enseignant → **Créer son accès enseignant** (le formulaire
+*Utilisateurs* s'ouvre pré-rempli avec le rôle *Enseignant* et la fiche associée). Le rôle n'a plus de valeur par défaut, et
+l'application refuse un compte relié à une fiche enseignant avec un autre rôle : un enseignant ne peut plus recevoir par erreur
+un accès administratif. Si un enseignant voit les pages de l'administration, vérifiez son rôle dans *Utilisateurs*.
 
 ## 10. Administration
 
