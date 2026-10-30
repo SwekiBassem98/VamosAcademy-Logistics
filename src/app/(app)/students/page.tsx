@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Prisma, StudentStatus } from "@prisma/client";
 import { Download, UserPlus } from "lucide-react";
 import { PageHeader, Table, Td, Badge, LinkButton, Forbidden, DemoBadge, EmptyState, Phone } from "@/components/ui";
@@ -20,6 +21,8 @@ const SORTS = ["lastName", "code", "createdAt", "level"] as const;
 
 export default async function Students({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await pageUser("students.read");
+  // Enseignant : ses élèves sont présentés classe par classe dans son espace
+  if (user?.role === "ENSEIGNANT") redirect("/classes");
   if (!user) return <Forbidden />;
   const params = await searchParams;
   const { q = "", level = "", status = "", group = "" } = params;
@@ -54,7 +57,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
       include: { level: true, guardians: { include: { guardian: true }, orderBy: { isPayer: "desc" }, take: 1 }, enrollments: { where: { status: "ACTIVE" }, include: { group: { select: { name: true } } } } },
     }),
     levelOptions(db),
-    db.group.findMany({ where: { schoolYearId: year?.id ?? "", active: true, ...(user.role === "ENSEIGNANT" ? { teacherId: user.teacherId ?? "" } : {}) }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.group.findMany({ where: { schoolYearId: year?.id ?? "", active: true, }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const balances = finance && year ? await studentBalances(students.map((s) => s.id), year.id) : null;
   const base = "/students";

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Card, PageHeader, Forbidden, Badge, DemoBadge, Phone } from "@/components/ui";
+import { Card, PageHeader, Forbidden, Badge, DemoBadge, Phone, LinkButton } from "@/components/ui";
 import { Sheet } from "@/components/sheet";
 import { Form, Input, Select, Submit } from "@/components/form";
 import { ConfirmAction } from "@/components/confirm";
@@ -22,7 +22,7 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
   const t = await db.teacher.findUnique({
     where: { id },
     include: {
-      subjects: { include: { subject: true } }, cycles: { include: { cycle: true } },
+      subjects: { include: { subject: true } }, cycles: { include: { cycle: true } }, user: { select: { id: true, email: true, active: true } },
       availability: { orderBy: [{ weekday: "asc" }, { startMin: "asc" }] },
       groups: {
         where: { active: true, schoolYear: { active: true } },
@@ -46,7 +46,12 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
           {t.cycles.map((c) => <Badge key={c.cycleId}>{c.cycle.name}</Badge>)}
           <Badge tone="amber">{(weeklyMin / 60).toLocaleString("fr-FR")} h / semaine</Badge>
         </>}
-        actions={write && <Sheet trigger="Modifier la fiche" variant="secondary" title="Modifier la fiche"><TeacherForm t={t} /></Sheet>} />
+        actions={<>
+          {can(user.role, "users.manage") && (t.user
+            ? <LinkButton variant="secondary" href={`/users?edit=${t.user.id}#compte`}>Accès : {t.user.email}{!t.user.active && " (désactivé)"}</LinkButton>
+            : <LinkButton variant="secondary" href={`/users?teacher=${t.id}#compte`}>Créer son accès enseignant</LinkButton>)}
+          {write && <Sheet trigger="Modifier la fiche" variant="secondary" title="Modifier la fiche"><TeacherForm t={t} /></Sheet>}
+        </>} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card title="Groupes affectés (année active)">

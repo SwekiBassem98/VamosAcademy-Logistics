@@ -89,3 +89,16 @@ export function normalizePhone(s: string): string | null {
   const digits = s.replace(/\D/g, "").replace(/^216/, "");
   return /^\d{8}$/.test(digits) ? `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}` : null;
 }
+
+/** Heure actuelle à Tunis, en minutes depuis minuit. */
+export function minutesNowTunis(now: Date = new Date()): number {
+  const [h, m] = new Intl.DateTimeFormat("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now).split(":").map(Number);
+  return h * 60 + m;
+}
+
+/** 135 → "2 h 15", 45 → "45 min" */
+export function formatDuration(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
+}

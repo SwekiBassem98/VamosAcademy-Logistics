@@ -39,7 +39,7 @@ export default async function Notifications({ searchParams }: { searchParams: Pr
           <option value="">À traiter (nouvelles + lues)</option><option value="NOUVELLE">Nouvelles</option><option value="LUE">Lues</option><option value="TRAITEE">Traitées</option><option value="all">Toutes</option>
         </select>
         <select name="type" defaultValue={params.type ?? ""} className="input md:w-52" aria-label="Type">
-          <option value="">Tous types</option>{Object.entries(TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          <option value="">Tous types</option>{Object.entries(TYPE_LABEL).filter(([k]) => user.role !== "ENSEIGNANT" || k === "ABSENCE" || k === "JUSTIFICATIF").map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
       </FilterBar>
       {list.length === 0 ? <EmptyState title="Aucune notification" text="Les nouveaux inscrits, paiements, absences, échéances et justificatifs manquants apparaissent ici." /> : (

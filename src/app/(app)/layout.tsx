@@ -29,12 +29,23 @@ const NAV: (NavItem & { perm?: Permission })[] = [
   { href: "/audit", label: "Journal d'audit", icon: "audit", section: "Administration", perm: "audit.read" },
 ];
 
+// Espace enseignant : uniquement ses outils de cours (les données restent filtrées côté serveur sur ses groupes)
+const TEACHER_NAV: NavItem[] = [
+  { href: "/dashboard", label: "Mon espace", short: "Accueil", icon: "dashboard", section: "Mon espace" },
+  { href: "/schedule", label: "Mon emploi du temps", short: "Agenda", icon: "schedule", section: "Mon espace" },
+  { href: "/classes", label: "Mes classes", short: "Classes", icon: "academics", section: "Mon espace" },
+  { href: "/attendance", label: "Appels", short: "Appels", icon: "attendance", section: "Suivi des élèves" },
+  { href: "/grades", label: "Notes", icon: "grades", section: "Suivi des élèves" },
+  { href: "/notifications", label: "Notifications", icon: "bell", section: "Centre" },
+  { href: "/documents", label: "Documents à imprimer", short: "Documents", icon: "documents", section: "Centre" },
+];
+
 // Barre d'onglets mobile : les 4 destinations les plus utilisées par chaque rôle (le reste est dans « Menu »)
 const TABS: Record<Role, string[]> = {
   ADMIN: ["/dashboard", "/students", "/attendance", "/payments"],
   RESPONSABLE: ["/dashboard", "/students", "/attendance", "/payments"],
   COMPTABLE: ["/dashboard", "/payments", "/unpaid", "/expenses"],
-  ENSEIGNANT: ["/dashboard", "/attendance", "/grades", "/schedule"],
+  ENSEIGNANT: ["/dashboard", "/classes", "/attendance", "/schedule"],
   LECTURE: ["/dashboard", "/students", "/schedule", "/attendance"],
 };
 
@@ -52,7 +63,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     db.schoolYear.findFirst({ where: { active: true }, select: { label: true } }),
     noticesFor(user),
   ]);
-  const items = NAV.filter((n) => !n.perm || can(user.role, n.perm)).map((n) => ({ href: n.href, label: n.label, short: n.short, icon: n.icon, section: n.section }));
+  const items = user.role === "ENSEIGNANT" ? TEACHER_NAV
+    : NAV.filter((n) => !n.perm || can(user.role, n.perm)).map((n) => ({ href: n.href, label: n.label, short: n.short, icon: n.icon, section: n.section }));
   const tabs = TABS[user.role].filter((h) => items.some((i) => i.href === h));
   return (
     <AppShell items={items} tabs={tabs} user={{ fullName: user.fullName, role: ROLE_LABELS[user.role], email: user.email }} yearLabel={year?.label ?? null} notices={notices} unread={unread} logout={logoutAction}>

@@ -12,6 +12,9 @@ export async function saveUser(id: string | null, _: ActionState, fd: FormData):
     const me = await requirePermission("users.manage");
     const { password, teacherId, ...v } = userSchema.parse(formToObject(fd));
     if (v.role === "ENSEIGNANT" && !teacherId) throw new BusinessError("Associez le compte enseignant à une fiche enseignant.");
+    // Évite de créer par erreur un accès administratif pour un enseignant (fiche choisie, rôle laissé sur un autre choix)
+    if (v.role !== "ENSEIGNANT" && teacherId) throw new BusinessError("Une fiche enseignant est sélectionnée : choisissez le rôle « Enseignant », ou retirez la fiche pour un compte administratif.");
+    if (teacherId && (await db.user.count({ where: { teacherId, ...(id ? { id: { not: id } } : {}) } }))) throw new BusinessError("Cette fiche enseignant a déjà un compte d'accès.");
     const active = id ? fd.get("active") === "on" : true;
     if (id === me.id && (!active || v.role !== "ADMIN")) throw new BusinessError("Vous ne pouvez pas retirer vos propres droits d'administrateur.");
     const link = v.role === "ENSEIGNANT" ? teacherId : null;

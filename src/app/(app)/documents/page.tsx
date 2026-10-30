@@ -27,6 +27,7 @@ function Doc({ title, text, icon, children }: { title: string; text: string; ico
 export default async function Documents() {
   const user = await requireUser();
   const has = (p: Permission) => can(user.role, p);
+  const teacher = user.role === "ENSEIGNANT";
   const [groups, levels, teachers] = await Promise.all([
     db.group.findMany({ where: { active: true, schoolYear: { active: true }, ...groupScope(user) }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     levelOptions(db),
@@ -38,14 +39,14 @@ export default async function Documents() {
 
   return (
     <>
-      <PageHeader title="Documents à imprimer" subtitle="Tous les documents portent l'identité officielle de VAMOS ACADEMY et la date d'édition (heure de Tunis). Utilisez « Imprimer » puis « Enregistrer au format PDF » si besoin." />
+      <PageHeader title="Documents à imprimer" subtitle={teacher ? "Listes de classe, feuilles d'appel, emploi du temps et synthèses de vos classes, aux couleurs de VAMOS ACADEMY. Utilisez « Imprimer » puis « Enregistrer au format PDF » si besoin." : "Tous les documents portent l'identité officielle de VAMOS ACADEMY et la date d'édition (heure de Tunis). Utilisez « Imprimer » puis « Enregistrer au format PDF » si besoin."} />
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
         {has("students.read") && (
-          <Doc icon={<Users />} title="Liste d'élèves par groupe" text="Liste nominative avec matricule et téléphone du parent ; export Excel disponible.">
+          <Doc icon={<Users />} title={teacher ? "Liste d'élèves d'une classe" : "Liste d'élèves par groupe"} text={teacher ? "Liste nominative de votre classe, avec le téléphone du parent." : "Liste nominative avec matricule et téléphone du parent ; export Excel disponible."}>
             <form action="/documents/group-list" className="grid gap-2 xs:grid-cols-[1fr_auto]">{groupSelect}{btn}</form>
           </Doc>
         )}
-        {has("students.read") && (
+        {has("students.read") && !teacher && (
           <Doc icon={<UsersRound />} title="Liste d'élèves par niveau" text="Tous les élèves actifs d'un niveau scolaire (classe), avec leurs groupes.">
             <form action="/documents/level-list" className="grid gap-2 xs:grid-cols-[1fr_auto]">
               <select name="level" required className="input" aria-label="Niveau"><option value="">Choisir un niveau…</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>{btn}
@@ -62,7 +63,7 @@ export default async function Documents() {
           </Doc>
         )}
         {has("academics.read") && (
-          <Doc icon={<CalendarDays />} title="Emploi du temps" text="Grille hebdomadaire imprimable : tout le centre, par enseignant ou par salle.">
+          <Doc icon={<CalendarDays />} title="Emploi du temps" text={teacher ? "Votre grille hebdomadaire, prête à imprimer." : "Grille hebdomadaire imprimable : tout le centre, par enseignant ou par salle."}>
             <form action="/schedule" className="grid gap-2 xs:grid-cols-[1fr_auto]">
               {teachers.length > 0 && <select name="teacher" className="input" aria-label="Enseignant"><option value="">Tout le centre</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.lastName} {t.firstName}</option>)}</select>}
               <input type="hidden" name="print" value="1" />{btn}
@@ -77,7 +78,7 @@ export default async function Documents() {
             </form>
           </Doc>
         )}
-        {has("students.read") && (
+        {has("students.read") && !teacher && (
           <Doc icon={<FileSpreadsheet />} title="Fiche d'inscription / bulletin" text="Depuis le dossier de l'élève : « Fiche d'inscription » (administration), « Bulletin » et « Relevé de compte » (finances).">
             <CardLink href="/students">Ouvrir la liste des élèves →</CardLink>
           </Doc>

@@ -27,6 +27,9 @@ const grades = await import("@/app/(app)/grades/actions");
 const payments = await import("@/app/(app)/payments/actions");
 const settings = await import("@/app/(app)/settings/actions");
 const { defaultBillingMonths } = await import("@/lib/billing");
+const users = await import("@/app/(app)/users/actions");
+const auth = await import("@/server/auth");
+const teacher = await import("@/server/services/teacher");
 
 const fd = (o: Record<string, string | string[] | undefined>) => {
   const f = new FormData();
@@ -207,5 +210,30 @@ describe("données de démonstration", () => {
     expect((await settings.purgeDemo(fd({ reason: "SUPPRIMER" })))?.ok).toBe(true);
     expect(await db.student.findUnique({ where: { id: demo.id } })).toBeNull();
     expect(await db.student.count({ where: { isDemo: false } })).toBe(before);
+  });
+});
+
+describe("espace enseignant", () => {
+  it("refuse un accès administratif créé par erreur pour un enseignant", async () => {
+    await loginAs("ADMIN");
+    const base = { fullName: "Prof Physique", email: "physique@test.tn", password: "Provisoire2026x" };
+    expect((await users.saveUser(null, null, fd({ ...base, teacherId: ids.t2 })))?.fieldErrors?.role).toBe("Choisissez un rôle");
+    expect((await users.saveUser(null, null, fd({ ...base, role: "RESPONSABLE", teacherId: ids.t2 })))?.error).toMatch(/choisissez le rôle « Enseignant »/);
+    expect(await db.user.count({ where: { email: base.email } })).toBe(0);
+    expect((await users.saveUser(null, null, fd({ ...base, role: "ENSEIGNANT", teacherId: ids.t2 })))?.ok).toBe(true);
+    const u = await db.user.findUniqueOrThrow({ where: { email: base.email } });
+    expect([u.role, u.teacherId, u.mustChangePassword]).toEqual(["ENSEIGNANT", ids.t2, true]);
+    expect((await users.saveUser(null, null, fd({ ...base, email: "autre@test.tn", role: "ENSEIGNANT", teacherId: ids.t2 })))?.error).toMatch(/déjà un compte/);
+  });
+
+  it("l'accueil enseignant ne contient que ses classes", async () => {
+    await loginAs("ENSEIGNANT", ids.t1);
+    const me = (await auth.getCurrentUser())!;
+    const classes = await teacher.teacherClasses(me);
+    expect(classes.map((c) => c.id)).toEqual([ids.g1]);
+    const home = await teacher.teacherHome(me);
+    expect(home.classes.map((c) => c.name)).toEqual(["Maths G1"]);
+    expect(home.firstName).toBe("Prof");
+    expect(home.occurrences.every((o) => o.cls.id === ids.g1 && o.weekday === 3)).toBe(true);
   });
 });

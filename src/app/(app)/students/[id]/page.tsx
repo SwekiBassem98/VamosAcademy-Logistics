@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { TeacherStudent } from "./teacher-student";
 import { notFound } from "next/navigation";
 import { Archive, FileText, NotebookPen, Pencil, Phone as PhoneIcon, Printer, Wallet } from "lucide-react";
 import { Card, CardLink, DescriptionList, PageHeader, Table, Td, Badge, LinkButton, Forbidden, Stat, DemoBadge, Phone as PhoneLink, buttonClass } from "@/components/ui";
@@ -30,6 +31,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   const user = await pageUser("students.read");
   if (!user) return <Forbidden />;
   const { id } = await params;
+  if (user.role === "ENSEIGNANT") return <TeacherStudent user={user} id={id} />;
   const { created } = await searchParams;
   const s = await db.student.findFirst({
     where: { id, ...studentScope(user) },
@@ -46,7 +48,6 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
   const contacts = can(user.role, "students.write");
   const finance = can(user.role, "payments.read");
   const year = await db.schoolYear.findFirst({ where: { active: true } });
-  const teacherGroups = user.role === "ENSEIGNANT" ? { group: { teacherId: user.teacherId ?? "" } } : {};
   const [invoices, payments, groups, discounts, levels, attendance, grades, history] = await Promise.all([
     finance ? studentInvoices(id, year?.id) : [],
     finance ? db.payment.findMany({ where: { studentId: id }, include: { schoolYear: true, mode: true, correctedBy: { select: { receiptNo: true } } }, orderBy: { paidAt: "desc" } }) : [],
@@ -58,10 +59,10 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
     write ? db.discountType.findMany({ where: { active: true }, orderBy: { name: "asc" } }) : [],
     levelOptions(db),
     can(user.role, "attendance.read")
-      ? db.attendanceRecord.findMany({ where: { studentId: id, session: teacherGroups }, include: { session: { include: { group: true } } }, orderBy: { session: { date: "desc" } }, take: 40 })
+      ? db.attendanceRecord.findMany({ where: { studentId: id }, include: { session: { include: { group: true } } }, orderBy: { session: { date: "desc" } }, take: 40 })
       : [],
     can(user.role, "grades.read")
-      ? db.grade.findMany({ where: { studentId: id, assessment: teacherGroups }, include: { assessment: { include: { group: { include: { subject: true, schoolYear: true } } } } }, orderBy: { assessment: { date: "desc" } } })
+      ? db.grade.findMany({ where: { studentId: id }, include: { assessment: { include: { group: { include: { subject: true, schoolYear: true } } } } }, orderBy: { assessment: { date: "desc" } } })
       : [],
     can(user.role, "students.write") || can(user.role, "audit.read")
       ? db.auditLog.findMany({ where: { entity: "Student", entityId: id }, include: { user: { select: { fullName: true } } }, orderBy: { createdAt: "desc" }, take: 30 })

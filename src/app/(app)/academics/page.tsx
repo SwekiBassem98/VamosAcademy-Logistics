@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { CalendarDays, Plus } from "lucide-react";
 import { buttonClass, Card, PageHeader, SectionTitle, Table, Td, Badge, Forbidden, DemoBadge, CardLink } from "@/components/ui";
@@ -19,6 +20,8 @@ export const metadata = { title: "Groupes & cours" };
 
 export default async function Academics({ searchParams }: { searchParams: Promise<Params> }) {
   const user = await pageUser("academics.read");
+  // Enseignant : ses élèves sont présentés classe par classe dans son espace
+  if (user?.role === "ENSEIGNANT") redirect("/classes");
   if (!user) return <Forbidden />;
   const write = can(user.role, "academics.write");
   const params = await searchParams;
@@ -68,7 +71,7 @@ export default async function Academics({ searchParams }: { searchParams: Promis
         search={<input name="q" type="search" defaultValue={q} placeholder="Nom du groupe…" className="input" aria-label="Rechercher un groupe" />}>
         <select name="subject" defaultValue={subject} className="input md:w-44" aria-label="Matière"><option value="">Toutes matières</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
         <select name="level" defaultValue={level} className="input md:w-52" aria-label="Niveau"><option value="">Tous niveaux</option>{levels.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</select>
-        {user.role !== "ENSEIGNANT" && <select name="teacher" defaultValue={teacher} className="input md:w-48" aria-label="Enseignant"><option value="">Tous enseignants</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.lastName} {t.firstName}</option>)}</select>}
+        {<select name="teacher" defaultValue={teacher} className="input md:w-48" aria-label="Enseignant"><option value="">Tous enseignants</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.lastName} {t.firstName}</option>)}</select>}
         <select name="status" defaultValue={status} className="input md:w-36" aria-label="Statut"><option value="active">Actifs</option><option value="archived">Archivés</option><option value="all">Tous</option></select>
       </FilterBar>
       <Table head={[<SortLink key="n" base={base} params={params} field="name" label="Groupe" />, "Niveau", "Matière", "Enseignant", "Horaires", <SortLink key="f" base={base} params={params} field="fill" label="Remplissage" />, <SortLink key="m" base={base} params={params} field="fee" label="Mensualité" />]} empty={groups.length === 0} emptyText="Aucun groupe ne correspond à ces critères." caption="Groupes">
