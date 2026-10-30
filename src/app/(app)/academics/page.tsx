@@ -144,12 +144,17 @@ export default async function Academics({ searchParams }: { searchParams: Promis
                         <span className="text-xs font-semibold text-brand">Modifier</span>
                       </summary>
                       <p className="mb-2"><CardLink href={`/schedule?room=${r.id}`}>Emploi du temps de la salle →</CardLink></p>
-                      <Form action={saveRoom.bind(null, r.id)} className="mb-2 grid grid-cols-2 gap-2 rounded-md border border-line p-2">
-                        <Input label="Nom" name="name" defaultValue={r.name} />
-                        <Input label="Capacité" name="capacity" type="number" inputMode="numeric" min={1} defaultValue={r.capacity} />
-                        <Submit variant="secondary">Enregistrer</Submit>
-                        <ConfirmAction action={deleteReference.bind(null, "room", r.id)} small label="Supprimer" title={`Supprimer ${r.name} ?`} message="Refusé si la salle est utilisée dans un emploi du temps." />
-                      </Form>
+                      {/* La suppression reste HORS du formulaire de modification (un formulaire imbriqué casse les deux boutons) */}
+                      <div className="mb-2 rounded-md border border-line p-2">
+                        <Form action={saveRoom.bind(null, r.id)} className="grid grid-cols-2 items-end gap-2">
+                          <Input label="Nom" name="name" defaultValue={r.name} />
+                          <Input label="Capacité" name="capacity" type="number" inputMode="numeric" min={1} defaultValue={r.capacity} />
+                          <div className="col-span-2"><Submit variant="secondary" className="w-full">Enregistrer</Submit></div>
+                        </Form>
+                        <div className="mt-2 flex justify-end border-t border-line pt-2">
+                          <ConfirmAction action={deleteReference.bind(null, "room", r.id)} small label="Supprimer la salle" title={`Supprimer ${r.name} ?`} message="Refusé si la salle est utilisée par un groupe ou un créneau de l'emploi du temps." />
+                        </div>
+                      </div>
                     </details>
                   </li>
                   );

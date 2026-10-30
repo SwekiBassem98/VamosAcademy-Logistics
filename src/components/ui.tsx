@@ -211,7 +211,8 @@ export function Td({ className, cell, ...p }: ComponentProps<"td"> & { cell?: Ce
   return (
     <td
       data-cell={cell === "num" ? undefined : cell}
-      className={clsx("px-4 py-3 align-middle lg:whitespace-nowrap", cell === "num" && "tabular-nums lg:text-right", cell === "wide" && "lg:whitespace-normal", className)}
+      // Colonne « wide » (texte long : message, motif…) : retour à la ligne et largeur minimale, jamais de débordement sur les voisines
+      className={clsx("px-4 py-3 align-middle", cell === "wide" ? "break-words lg:min-w-[18rem] lg:whitespace-normal" : "lg:whitespace-nowrap", cell === "num" && "tabular-nums lg:text-right", className)}
       {...p}
     />
   );
@@ -265,17 +266,22 @@ export function EmptyState({ title, text, action, icon }: { title: string; text?
   );
 }
 
-/** Liste « libellé : valeur » ; une colonne sur mobile, deux à partir de sm. */
+/**
+ * Liste « libellé : valeur ». Selon la largeur de SON conteneur (et non de l'écran) : libellé au-dessus de la valeur
+ * dans une carte étroite (colonne latérale, mobile), deux colonnes dès que la carte dépasse ~26 rem.
+ */
 export function DescriptionList({ items, className }: { items: [ReactNode, ReactNode][]; className?: string }) {
   return (
-    <dl className={clsx("grid gap-x-4 gap-y-2.5 text-sm sm:grid-cols-[minmax(0,10rem)_1fr]", className)}>
-      {items.map(([k, v], i) => (
-        <div key={i} className="contents">
-          <dt className="text-xs font-semibold text-muted sm:text-sm sm:font-normal">{k}</dt>
-          <dd className="-mt-2 min-w-0 break-words sm:mt-0">{v}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="@container">
+      <dl className={clsx("grid gap-x-4 gap-y-2.5 text-sm @[26rem]:grid-cols-[minmax(0,9rem)_1fr]", className)}>
+        {items.map(([k, v], i) => (
+          <div key={i} className="contents">
+            <dt className="text-xs font-semibold text-muted @[26rem]:text-sm @[26rem]:font-normal">{k}</dt>
+            <dd className="-mt-2 min-w-0 break-words @[26rem]:mt-0">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
