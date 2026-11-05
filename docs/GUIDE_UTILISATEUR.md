@@ -164,4 +164,6 @@ Le bouton *Supprimer* figure dans le dossier de l'élève, la fiche de l'enseign
 - **Enseignant** : sa fiche, ses rémunérations et son compte sont effacés. Ses groupes restent, sans enseignant, et les dépenses de rémunération restent en comptabilité.
 - **Utilisateur** : le compte est effacé. Vous ne pouvez supprimer ni votre propre compte ni le dernier administrateur actif.
 
+- **Groupe** : bouton *Supprimer* dans la fiche du groupe. Un groupe vide (sans inscription, appel ni note) peut être supprimé par un administrateur ou un responsable, avec ses créneaux. S'il contient des données, seul un administrateur peut le supprimer, avec un motif : les inscriptions, échéances, appels et notes du groupe sont effacés, mais pas les dossiers des élèves. Si un paiement, même annulé, porte sur ce groupe, la suppression est refusée : terminez les inscriptions puis archivez-le.
+
 Le journal d'audit conserve une trace de chaque suppression.

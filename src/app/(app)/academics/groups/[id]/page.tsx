@@ -10,7 +10,8 @@ import { canAccessGroup } from "@/server/scope";
 import { can } from "@/lib/permissions";
 import { formatDate, formatMinutes, formatMoney, minutesInput, WEEKDAYS } from "@/lib/format";
 import { GroupFields } from "../../group-fields";
-import { saveSlot, deleteSlot, updateGroup } from "../../actions";
+import { saveSlot, deleteSlot, updateGroup, removeGroup } from "../../actions";
+import { groupDeletionImpact } from "@/server/services/deletions";
 
 
 export const metadata = { title: "Groupe" };
@@ -32,6 +33,8 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
   if (!g) notFound();
   const manage = can(user.role, "academics.write");
   const rooms = manage ? await db.room.findMany({ orderBy: { name: "asc" } }) : [];
+  const impact = manage ? await groupDeletionImpact(g.id) : null;
+  const isAdmin = can(user.role, "users.manage");
   const dayOptions = WEEKDAYS.slice(1).map((d, i) => ({ value: String(i + 1), label: d }));
   const roomOptions = rooms.map((r) => ({ value: r.id, label: `${r.name} (${r.capacity} pl.)` }));
 
@@ -51,8 +54,20 @@ export default async function GroupPage({ params }: { params: Promise<{ id: stri
         actions={<>
           <PrintButton label="Imprimer la liste" />
           {can(user.role, "grades.read") && <LinkButton variant="secondary" href={`/grades?group=${g.id}`}>Notes</LinkButton>}
+          {impact && !impact.allocations && (impact.empty || isAdmin) && (
+            <ConfirmAction action={removeGroup.bind(null, g.id)} label="Supprimer le groupe" title={`Supprimer définitivement le groupe ${g.name} ?`} confirmLabel="Supprimer définitivement"
+              withReason={impact.empty ? undefined : "Motif"}
+              message={impact.empty
+                ? <>Ce groupe ne contient ni inscription, ni appel, ni note. Il sera supprimé avec ses créneaux. Cette action est <strong>irréversible</strong>.</>
+                : <>Cette action est <strong>irréversible</strong>. Seront effacés : <strong>{impact.enrollments} inscription(s)</strong> et leurs échéances, <strong>{impact.sessions} appel(s)</strong>, <strong>{impact.assessments} évaluation(s)</strong> et leurs notes. Les dossiers des élèves sont conservés. Les paies déjà validées ne changent pas, mais ces séances ne compteront plus dans les prochains calculs.</>} />
+          )}
         </>}
       />
+      {impact && (impact.allocations > 0 || (!impact.empty && !isAdmin)) && (
+        <p className="no-print mb-4 text-xs text-muted">{impact.allocations > 0
+          ? "Suppression impossible : des paiements sont enregistrés sur ce groupe. Pour le retirer, terminez les inscriptions puis archivez-le : l'historique financier est conservé."
+          : "Ce groupe contient des inscriptions, appels ou notes : seul un administrateur peut le supprimer."}</p>
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 lg:col-span-2">
           <Card title={`Liste des élèves — ${g.name}`}>

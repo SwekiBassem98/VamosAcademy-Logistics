@@ -74,3 +74,46 @@ export async function deleteTeacher(id: string, reason: string, userId: string) 
     return { name: `${t.lastName} ${t.firstName}`, groups: t._count.groups };
   });
 }
+
+/** Ce que la suppression d'un groupe effacerait (affiché dans la confirmation, revérifié à la suppression). */
+export async function groupDeletionImpact(id: string, tx: Pick<typeof db, "enrollment" | "attendanceSession" | "assessment" | "paymentAllocation"> = db) {
+  // L'une après l'autre : une transaction n'exécute qu'une requête à la fois
+  const enrollments = await tx.enrollment.count({ where: { groupId: id } });
+  const sessions = await tx.attendanceSession.count({ where: { groupId: id } });
+  const assessments = await tx.assessment.count({ where: { groupId: id } });
+  const allocations = await tx.paymentAllocation.count({ where: { invoice: { enrollment: { groupId: id } } } });
+  return { enrollments, sessions, assessments, allocations, empty: enrollments + sessions + assessments === 0 };
+}
+
+/**
+ * Suppression définitive d'un groupe, de ses créneaux, inscriptions, échéances non réglées, appels et notes.
+ * Refusée dès qu'un paiement (même annulé) porte sur ses échéances : un reçu peut couvrir plusieurs groupes
+ * et l'historique financier ne doit pas être réécrit. Un groupe contenant des données est réservé à l'administrateur.
+ */
+export async function deleteGroup(id: string, reason: string, userId: string, isAdmin: boolean) {
+  return db.$transaction(async (tx) => {
+    const g = await tx.group.findUnique({ where: { id }, include: { subject: true, level: true, schoolYear: true, teacher: true } });
+    if (!g) throw new BusinessError("Ce groupe a déjà été supprimé.");
+    const impact = await groupDeletionImpact(id, tx);
+    if (impact.allocations) throw new BusinessError("Suppression impossible : des paiements sont enregistrés sur ce groupe. Archivez-le pour conserver l'historique financier.");
+    if (!impact.empty) {
+      if (!isAdmin) throw new BusinessError("Ce groupe contient des inscriptions, appels ou notes : seul un administrateur peut le supprimer.");
+      checkReason(reason);
+    }
+    const students = await tx.enrollment.findMany({ where: { groupId: id }, select: { student: { select: { code: true } } } });
+
+    await tx.notification.deleteMany({ where: { OR: [
+      { href: `/academics/groups/${id}` }, { href: { startsWith: `/attendance?group=${id}` } }, { dedupeKey: { endsWith: `:${id}` } },
+    ] } });
+    await tx.invoice.deleteMany({ where: { enrollment: { groupId: id } } });
+    await tx.enrollment.deleteMany({ where: { groupId: id } });
+    await tx.group.delete({ where: { id } }); // créneaux, appels et évaluations en cascade (présences et notes avec eux)
+
+    await audit(userId, "group.delete", "Group", id, {
+      name: g.name, year: g.schoolYear.label, subject: g.subject.name, level: g.level.name, teacher: g.teacher ? `${g.teacher.lastName} ${g.teacher.firstName}` : null,
+      monthlyFee: g.monthlyFee, reason: reason.trim() || null, enrollments: impact.enrollments, sessions: impact.sessions, assessments: impact.assessments,
+      studentCodes: students.map((e) => e.student.code),
+    }, tx);
+    return g.name;
+  });
+}
