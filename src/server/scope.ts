@@ -8,8 +8,14 @@ export function groupScope(user: CurrentUser): Prisma.GroupWhereInput {
   return user.role === "ENSEIGNANT" ? { teacherId: user.teacherId ?? "__aucun__" } : {};
 }
 
+/** Enfants d'un compte parent. Un compte sans parent associé ne voit aucun élève. */
+export function childrenOf(user: CurrentUser): Prisma.StudentWhereInput {
+  return { guardians: { some: { guardianId: user.guardianId ?? "__aucun__" } } };
+}
+
 /** Filtre Prisma sur les élèves visibles. */
 export function studentScope(user: CurrentUser): Prisma.StudentWhereInput {
+  if (user.role === "PARENT") return childrenOf(user);
   return user.role === "ENSEIGNANT" ? { enrollments: { some: { status: "ACTIVE", group: groupScope(user) } } } : {};
 }
 

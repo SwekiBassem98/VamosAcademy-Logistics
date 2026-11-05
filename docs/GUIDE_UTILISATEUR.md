@@ -9,7 +9,7 @@ n'y a pas accès.
 | Responsable administratif | Élèves, parents, inscriptions, groupes, emplois du temps, présences, encaissements, messages |
 | Comptable | Paiements (dont annulation et correction), dépenses, rémunérations, rapports, messages |
 | Enseignant | Son espace : emploi du temps, ses classes et ses élèves, appel, notes et appréciations (aucune donnée financière ni administrative) |
-| Lecture seule | Consultation des élèves, groupes, présences et notes |
+| Parent | Portail limité à ses enfants : emploi du temps, échéances, reçus, présences et notes |
 
 ## 1. Connexion et mot de passe
 
@@ -123,7 +123,7 @@ un accès administratif. Si un enseignant voit les pages de l'administration, v�
 
 - *Utilisateurs* : créer un compte avec un mot de passe provisoire (changement forcé à la 1re connexion), changer un rôle,
   désactiver un compte (déconnexion immédiate).
-- *Paramètres* : coordonnées du centre, années scolaires et mois facturés, grille tarifaire, moyens de paiement, réductions,
+- *Paramètres* : coordonnées du centre, années scolaires et mois facturés, moyens de paiement,
   modèles de messages, suppression des données de démonstration.
 - *Journal d'audit* : qui a fait quoi et quand (connexions, modifications, paiements, annulations, exports).
 
@@ -132,3 +132,36 @@ un accès administratif. Si un enseignant voit les pages de l'administration, v�
 - **« Accès refusé »** : votre rôle ne permet pas cette action ; demandez à l'administrateur.
 - **« Connexion au serveur impossible »** : vos saisies sont conservées ; vérifiez Internet puis cliquez à nouveau.
 - **Un montant** se saisit avec une virgule : `45,500` = 45 dinars 500 millimes.
+
+## Tarifs et réductions
+
+Menu *Finances → Tarifs & réductions* :
+
+1. **Grille tarifaire** : tarif par niveau, matière ou cycle. La règle la plus précise l'emporte.
+2. **Tarifs des groupes** : compare chaque groupe à la grille (conforme, personnalisé, sans tarif) et permet de l'aligner.
+3. **Réductions autorisées** : fratrie, bourse, etc.
+4. **Réductions en cours** : les inscriptions qui en bénéficient.
+
+À l'inscription, le dossier de l'élève affiche le prix avant validation : tarif du groupe, réduction, mensualité nette, nombre d'échéances et total de l'année.
+Changer un tarif ne modifie jamais une inscription existante : pour cela, passez par *Modifier le tarif ou l'échéancier* dans le dossier.
+
+## Portail parent
+
+1. Menu *Parents* → *Créer l'accès* sur la ligne du parent (ou menu *Utilisateurs*, rôle Parent, en choisissant le parent).
+2. Communiquez l'e-mail et le mot de passe provisoire au parent : il le change à sa première connexion.
+
+Le parent voit uniquement les enfants rattachés à sa fiche. Les frères et sœurs partageant son téléphone apparaissent ensemble.
+
+## Reçu de rémunération
+
+Quand vous cliquez sur *Payer* dans *Rémunérations*, un numéro de reçu (P-2026-000001) est attribué et le reçu s'ouvre, prêt à imprimer et à signer. Il reste accessible par le bouton *Reçu* de la liste et en PDF.
+
+## Suppressions (administrateur)
+
+Le bouton *Supprimer* figure dans le dossier de l'élève, la fiche de l'enseignant et la liste des utilisateurs. Une fenêtre de confirmation s'affiche toujours et un motif est demandé pour un élève ou un enseignant. La suppression est **définitive**.
+
+- **Élève** : le dossier, ses notes, présences, échéances et **paiements** sont effacés et disparaissent des rapports. Un parent sans autre enfant est supprimé avec son accès au portail. Pour garder l'historique, préférez *Archiver*.
+- **Enseignant** : sa fiche, ses rémunérations et son compte sont effacés. Ses groupes restent, sans enseignant, et les dépenses de rémunération restent en comptabilité.
+- **Utilisateur** : le compte est effacé. Vous ne pouvez supprimer ni votre propre compte ni le dernier administrateur actif.
+
+Le journal d'audit conserve une trace de chaque suppression.

@@ -107,6 +107,7 @@ test("8. un enseignant ne peut ni voir ni ouvrir les finances", async ({ page })
 test("premier login : changement de mot de passe obligatoire", async ({ page }) => {
   await login(page, "nouveau@e2e.tn", "Provisoire2026e2e");
   await expect(page).toHaveURL(/\/profile/);
+  await expect(page.getByLabel("Mot de passe actuel", { exact: true })).toBeVisible(); // pas d'écran vide, sans rafraîchir
   await page.goto("/students");
   await expect(page).toHaveURL(/\/profile/);
   await expect(page.locator('p[role="alert"]')).toContainText("vous devez choisir un nouveau mot de passe");

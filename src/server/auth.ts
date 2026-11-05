@@ -21,6 +21,8 @@ export interface CurrentUser {
   email: string;
   role: Role;
   teacherId: string | null;
+  /** Compte parent : le tuteur dont il voit les enfants. */
+  guardianId: string | null;
   mustChangePassword: boolean;
 }
 
@@ -102,13 +104,23 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       data: { expiresAt: new Date(Date.now() + SESSION_HOURS * 3600_000) },
     });
   }
-  const { id, fullName, email, role, teacherId, mustChangePassword } = session.user;
-  return { id, fullName, email, role, teacherId, mustChangePassword };
+  const { id, fullName, email, role, teacherId, guardianId, mustChangePassword } = session.user;
+  return { id, fullName, email, role, teacherId, guardianId, mustChangePassword };
 });
 
 export async function requireUser(): Promise<CurrentUser> {
   const u = await getCurrentUser();
   if (!u) redirect("/login");
+  return u;
+}
+
+/**
+ * Page réservée au personnel (sans permission précise). Un parent est renvoyé vers son portail :
+ * le contrôle est fait ici car un layout n'est pas réexécuté lors d'une navigation côté client.
+ */
+export async function requireStaff(): Promise<CurrentUser> {
+  const u = await requireUser();
+  if (u.role === "PARENT") redirect("/parent");
   return u;
 }
 

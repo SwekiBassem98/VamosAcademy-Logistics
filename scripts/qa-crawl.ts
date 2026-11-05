@@ -17,7 +17,7 @@ const ROLES: [string, string][] = [
   ["RESPONSABLE", "responsable@demo.vamos-academy.tn"],
   ["COMPTABLE", "comptable@demo.vamos-academy.tn"],
   ["ENSEIGNANT", "enseignant@demo.vamos-academy.tn"],
-  ["LECTURE", "lecture@demo.vamos-academy.tn"],
+  ["PARENT", "parent@demo.vamos-academy.tn"],
 ];
 // (le texte de la page 404 est embarqué dans toutes les pages : une page introuvable se détecte par le statut HTTP 404)
 const ERROR_MARKERS = ["Une erreur est survenue", "Application error", "Element type is invalid", "Internal Server Error"];

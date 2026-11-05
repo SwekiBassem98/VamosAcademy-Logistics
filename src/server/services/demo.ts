@@ -37,6 +37,7 @@ export async function purgeDemoData() {
     await tx.teacherPay.deleteMany({ where: { teacher: { isDemo: true } } });
     await tx.user.deleteMany({ where: { email: { endsWith: "@demo.vamos-academy.tn" } } }); // comptes de test
     await tx.user.updateMany({ where: { teacher: { isDemo: true } }, data: { teacherId: null, active: false } });
+    await tx.user.updateMany({ where: { guardian: { isDemo: true } }, data: { guardianId: null, active: false } });
     const t = await tx.teacher.deleteMany({ where: { isDemo: true, groups: { none: {} } } });
     const e = await tx.expense.deleteMany({ where: { isDemo: true } });
     return { students: s.count, guardians: g.count, groups: gr.count, teachers: t.count, expenses: e.count };

@@ -101,3 +101,65 @@ export async function receiptPdf(paymentId: string): Promise<Uint8Array> {
   text(page, `Document édité le ${formatDateTime(new Date())} (heure de Tunis)${p.student.isDemo ? " — DONNÉES DE DÉMONSTRATION" : ""}`, M, 37, regular, 7, GRAY);
   return doc.save();
 }
+
+/** Reçu de rémunération d'un enseignant (A5), à signer par lui lors du paiement. */
+export async function teacherPayPdf(payId: string): Promise<Uint8Array> {
+  const [p, c] = await Promise.all([
+    db.teacherPay.findUniqueOrThrow({ where: { id: payId }, include: { teacher: true, mode: true, expense: { select: { reference: true } } } }),
+    db.centerSettings.findUnique({ where: { id: 1 } }),
+  ]);
+  const doc = await PDFDocument.create();
+  doc.setTitle(`Reçu ${p.receiptNo ?? p.period} — VAMOS ACADEMY`);
+  doc.setAuthor(c?.name ?? "VAMOS ACADEMY");
+  doc.setCreator("VAMOS ACADEMY — Gestion");
+  const page = doc.addPage([420, 595]);
+  const regular = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const W = 420, M = 30;
+  let y = 595 - M;
+  try {
+    const png = await doc.embedPng(await readFile(path.join(process.cwd(), "public/brand/logo.png")));
+    const h = 44, w = (png.width / png.height) * h;
+    page.drawImage(png, { x: M, y: y - h, width: w, height: h });
+  } catch { /* logo absent : en-tête texte seul */ }
+  right(page, "REÇU DE RÉMUNÉRATION", W - M, y - 12, bold, 13, NAVY);
+  right(page, p.receiptNo ?? "—", W - M, y - 28, bold, 11, RED);
+  right(page, `Payé le ${p.paidAt ? formatDate(p.paidAt) : "—"}`, W - M, y - 42, regular, 9, GRAY);
+  y -= 62;
+  text(page, c?.name ?? "VAMOS ACADEMY", M, y, bold, 9, NAVY);
+  text(page, `${c?.addressFr ?? ""} — Tél. ${c?.phone ?? ""}`, M, y - 11, regular, 8, GRAY);
+  y -= 20;
+  page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 2, color: RED });
+  y -= 22;
+  const field = (label: string, value: string, x: number, yy: number) => { text(page, label, x, yy, regular, 8, GRAY); text(page, value, x, yy - 11, bold, 10); };
+  field("Enseignant", `${p.teacher.lastName} ${p.teacher.firstName}`, M, y);
+  field("Période", formatPeriod(p.period), 250, y);
+  y -= 30;
+  field("Moyen de paiement", `${p.mode?.label ?? "—"}${p.expense?.reference ? ` (${p.expense.reference})` : ""}`, M, y);
+  y -= 32;
+  page.drawRectangle({ x: M, y: y - 4, width: W - 2 * M, height: 16, color: NAVY });
+  text(page, "DÉSIGNATION", M + 6, y, bold, 8, rgb(1, 1, 1));
+  right(page, "MONTANT", W - M - 6, y, bold, 8, rgb(1, 1, 1));
+  y -= 18;
+  const row = (label: string, amount: string) => {
+    text(page, label.slice(0, 70), M + 6, y, regular, 9);
+    right(page, amount, W - M - 6, y, regular, 9);
+    y -= 17;
+  };
+  row("Montant calculé", formatMoney(p.computedAmount));
+  if (p.adjustment !== 0) row(`Ajustement — ${p.adjustmentNote ?? ""}`, `${p.adjustment > 0 ? "+" : ""}${formatMoney(p.adjustment)}`);
+  y -= 4;
+  right(page, "Net payé", W - M - 110, y, bold, 10);
+  right(page, formatMoney(p.amount), W - M - 6, y, bold, 13, RED);
+  if (p.cancelledAt) {
+    page.drawText("ANNULÉ", { x: 90, y: 260, size: 60, font: bold, color: rgb(0.86, 0.15, 0.15), opacity: 0.18, rotate: degrees(20) });
+    y -= 20; text(page, pdfText(`Annulé le ${formatDateTime(p.cancelledAt)} — ${p.cancelReason ?? ""}`).slice(0, 95), M, y, bold, 8, RED);
+  }
+  page.drawLine({ start: { x: M, y: 125 }, end: { x: 180, y: 125 }, thickness: 0.5, color: GRAY, dashArray: [3, 2] });
+  text(page, "Signature de l'enseignant", M + 20, 114, regular, 8, GRAY);
+  page.drawLine({ start: { x: 250, y: 125 }, end: { x: W - M, y: 125 }, thickness: 0.5, color: GRAY, dashArray: [3, 2] });
+  text(page, "Cachet & signature", 285, 114, regular, 8, GRAY);
+  page.drawLine({ start: { x: M, y: 60 }, end: { x: W - M, y: 60 }, thickness: 0.5, color: rgb(0.85, 0.86, 0.88) });
+  text(page, `Document édité le ${formatDateTime(new Date())} (heure de Tunis)${p.teacher.isDemo ? " — DONNÉES DE DÉMONSTRATION" : ""}`, M, 37, regular, 7, GRAY);
+  return doc.save();
+}

@@ -1,6 +1,6 @@
 import { CalendarDays, ClipboardList, FileSpreadsheet, HandCoins, NotebookPen, Receipt, Users, UsersRound, BarChart3 } from "lucide-react";
 import { PageHeader, ApplyButton, CardLink } from "@/components/ui";
-import { requireUser } from "@/server/auth";
+import { requireStaff } from "@/server/auth";
 import { db } from "@/server/db";
 import { groupScope } from "@/server/scope";
 import { can, type Permission } from "@/lib/permissions";
@@ -25,7 +25,7 @@ function Doc({ title, text, icon, children }: { title: string; text: string; ico
 }
 
 export default async function Documents() {
-  const user = await requireUser();
+  const user = await requireStaff();
   const has = (p: Permission) => can(user.role, p);
   const teacher = user.role === "ENSEIGNANT";
   const [groups, levels, teachers] = await Promise.all([

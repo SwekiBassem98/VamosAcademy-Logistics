@@ -285,6 +285,9 @@ test("rémunérations : calcul, validation, paiement puis annulation", async ({ 
   await formWith(page, "Valider").first().getByRole("button", { name: "Valider", exact: true }).click();
   await expect(formWith(page, "Payer")).toHaveCount(payable + 1);
   await formWith(page, "Payer").first().getByRole("button", { name: "Payer", exact: true }).click();
+  await page.waitForURL(/\/payroll\/[a-z0-9]+\?print=1/);
+  await expect(page.getByText("Reçu de rémunération", { exact: true })).toBeVisible();
+  await page.goto("/payroll?period=2026-10");
   await expect(formWith(page, "Payer")).toHaveCount(payable);
   await expect(page.getByText("Payée").first()).toBeVisible();
   expect(await confirm(page, page.getByRole("button", { name: "Annuler" }).first(), "Erreur de calcul")).toBeNull();
@@ -321,7 +324,7 @@ test("paramètres : centre, réduction, grille tarifaire, moyen de paiement, mod
   await submitOk(center, "Enregistrer");
   await submitOk(formWith(page, "Générer les échéances").first(), "Générer les échéances");
 
-  await page.goto("/settings/finance");
+  await page.goto("/tarifs");
   const discount = page.locator("form").filter({ has: page.locator('input[name="percent"]') }).last();
   await discount.locator('input[name="name"]').fill(`Promo ${STAMP}`);
   await discount.locator('input[name="percent"]').fill("15");
@@ -335,6 +338,7 @@ test("paramètres : centre, réduction, grille tarifaire, moyen de paiement, mod
   await expect(feeRow).toHaveCount(1);
   expect(await confirm(page, feeRow.getByRole("button", { name: "Retirer" }))).toBeNull();
   await expect(page.locator("tr", { hasText: "33,000 DT" })).toHaveCount(0);
+  await page.goto("/settings/finance");
   const mode = page.locator("form").filter({ has: page.locator('input[name="code"]') }).last();
   await mode.locator('input[name="code"]').fill(`M${STAMP}`);
   await mode.locator('input[name="label"]').fill(`Mode ${STAMP}`);
@@ -347,7 +351,7 @@ test("paramètres : centre, réduction, grille tarifaire, moyen de paiement, mod
   const user = formWith(page, "Créer le compte");
   await user.locator('input[name="fullName"]').fill(`Agent ${STAMP}`);
   await user.locator('input[name="email"]').fill(`agent${STAMP.toLowerCase()}@e2e.tn`);
-  await user.locator('select[name="role"]').selectOption("LECTURE");
+  await user.locator('select[name="role"]').selectOption("RESPONSABLE");
   await user.locator('input[name="password"]').fill("Provisoire2026abc");
   await submitOk(user, "Créer le compte");
   await page.reload();

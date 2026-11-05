@@ -41,7 +41,8 @@ const MATRIX: Record<Role, readonly Permission[]> = {
   ],
   // Limité à ses groupes (cf. src/server/scope.ts)
   ENSEIGNANT: ["students.read", "academics.read", "attendance.read", "attendance.write", "grades.read", "grades.write"],
-  LECTURE: ["students.read", "academics.read", "teachers.read", "attendance.read", "grades.read"],
+  // Portail parent : aucune permission d'administration ; accès limité à ses enfants (cf. src/server/scope.ts)
+  PARENT: [],
 };
 
 export function can(role: Role, permission: Permission): boolean {
@@ -57,5 +58,5 @@ export const ROLE_LABELS: Record<Role, string> = {
   RESPONSABLE: "Responsable administratif",
   COMPTABLE: "Comptable",
   ENSEIGNANT: "Enseignant",
-  LECTURE: "Lecture seule",
+  PARENT: "Parent",
 };

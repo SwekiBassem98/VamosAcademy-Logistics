@@ -1,13 +1,13 @@
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/auth";
 import { Form, Input, Submit } from "@/components/form";
 import { loginAction } from "./actions";
+import { OpenSpace } from "./open-space";
 
 export const metadata = { title: "Connexion" };
 
 export default async function LoginPage() {
-  if (await getCurrentUser()) redirect("/dashboard");
+  if (await getCurrentUser()) return <OpenSpace />;
   return (
     <div className="flex min-h-dvh flex-col bg-white lg:flex-row">
       <div className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-navy p-10 text-white lg:flex">

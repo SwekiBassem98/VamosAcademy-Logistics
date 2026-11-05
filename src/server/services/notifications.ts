@@ -104,7 +104,7 @@ export async function syncAlerts(force = false) {
 
   // 4. Dépenses sans justificatif
   const expenses = await db.expense.findMany({
-    where: { cancelledAt: null, schoolYearId: year.id, attachments: { none: {} }, teacherPayId: null, NOT: { corrects: { is: { attachments: { some: {} } } } } },
+    where: { cancelledAt: null, schoolYearId: year.id, attachments: { none: {} }, teacherPayId: null, NOT: [{ corrects: { is: { attachments: { some: {} } } } }, { label: { startsWith: "Rémunération " } }] },
     take: 200,
   });
   for (const e of expenses) {

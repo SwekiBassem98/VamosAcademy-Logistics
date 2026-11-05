@@ -9,7 +9,7 @@ import { db } from "@/server/db";
 import { can } from "@/lib/permissions";
 import { formatMinutes, WEEKDAYS } from "@/lib/format";
 import { TeacherForm, payLabel } from "../teacher-form";
-import { addAvailability, deleteAvailability } from "../actions";
+import { addAvailability, deleteAvailability, removeTeacher } from "../actions";
 
 
 export const metadata = { title: "Enseignant" };
@@ -51,6 +51,10 @@ export default async function TeacherPage({ params }: { params: Promise<{ id: st
             ? <LinkButton variant="secondary" href={`/users?edit=${t.user.id}#compte`}>Accès : {t.user.email}{!t.user.active && " (désactivé)"}</LinkButton>
             : <LinkButton variant="secondary" href={`/users?teacher=${t.id}#compte`}>Créer son accès enseignant</LinkButton>)}
           {write && <Sheet trigger="Modifier la fiche" variant="secondary" title="Modifier la fiche"><TeacherForm t={t} /></Sheet>}
+          {can(user.role, "users.manage") && (
+            <ConfirmAction action={removeTeacher.bind(null, t.id)} label="Supprimer" title={`Supprimer définitivement ${t.firstName} ${t.lastName} ?`} withReason="Motif" confirmLabel="Supprimer définitivement"
+              message={<>Cette action est <strong>irréversible</strong>. Sa fiche, ses rémunérations{t.user ? ", ses reçus et son compte d'accès" : " et ses reçus"} seront supprimés. Ses groupes restent, sans enseignant. Les dépenses de rémunération déjà enregistrées restent en comptabilité.</>} />
+          )}
         </>} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">

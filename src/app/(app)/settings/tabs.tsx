@@ -3,7 +3,7 @@ import clsx from "clsx";
 
 const TABS = [
   { key: "general", href: "/settings", label: "Centre & années" },
-  { key: "finance", href: "/settings/finance", label: "Tarifs & paiements" },
+  { key: "finance", href: "/settings/finance", label: "Moyens de paiement" },
   { key: "templates", href: "/settings/templates", label: "Modèles de messages" },
 ] as const;
 

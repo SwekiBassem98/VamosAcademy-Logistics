@@ -156,7 +156,7 @@ async function demo(yearId: string, months: string[], dueDay: number) {
   const demoPwd = await bcrypt.hash("Demo2026vamos", 12);
   const accounts: [Role, string, string | null][] = [
     ["RESPONSABLE", "Responsable (démo)", null], ["COMPTABLE", "Comptable (démo)", null],
-    ["ENSEIGNANT", "Prof. Maths (démo)", tMath.id], ["LECTURE", "Lecture seule (démo)", null],
+    ["ENSEIGNANT", "Prof. Maths (démo)", tMath.id],
   ];
   for (const [role, fullName, teacherId] of accounts) {
     await db.user.upsert({
@@ -210,6 +210,13 @@ async function demo(yearId: string, months: string[], dueDay: number) {
       });
     }
   }
+
+  // Compte parent de démonstration : voit uniquement Amine et Yasmine (même téléphone de parent)
+  const demoParent = await db.guardian.findFirstOrThrow({ where: { phone: "98 100 001" } });
+  await db.user.upsert({
+    where: { email: `parent@${DEMO_EMAIL_DOMAIN}` }, update: { guardianId: demoParent.id },
+    create: { email: `parent@${DEMO_EMAIL_DOMAIN}`, fullName: "Parent (démo)", role: "PARENT", guardianId: demoParent.id, passwordHash: demoPwd },
+  });
 
   // Présences des dernières semaines + une évaluation notée par groupe
   for (const g of groups) {

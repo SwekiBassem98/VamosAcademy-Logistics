@@ -41,7 +41,7 @@ const fd = (o: Record<string, string | string[] | undefined>) => {
   for (const [k, v] of Object.entries(o)) for (const x of [v ?? ""].flat()) f.append(k, x);
   return f;
 };
-const users: Partial<Record<Role, { id: string; role: Role; teacherId: string | null; email: string; fullName: string; mustChangePassword: boolean }>> = {};
+const users: Partial<Record<Role, { id: string; role: Role; teacherId: string | null; email: string; fullName: string; guardianId: string | null; mustChangePassword: boolean }>> = {};
 async function loginAs(role: Role, teacherId?: string) {
   const user = users[role] ?? (users[role] = await db.user.create({ data: { email: `${role.toLowerCase()}@scenario.tn`, fullName: `Test ${role}`, role, passwordHash: "x", teacherId } }));
   const token = randomBytes(32).toString("base64url");
@@ -197,7 +197,7 @@ describe("Scénario métier VAMOS ACADEMY", () => {
   });
 
   it("8. les rôles non autorisés ne peuvent ni consulter ni modifier les finances", async () => {
-    for (const role of ["ENSEIGNANT", "LECTURE"] as const) {
+    for (const role of ["ENSEIGNANT", "PARENT"] as const) {
       await loginAs(role, role === "ENSEIGNANT" ? ids.teacher : undefined);
       const u = users[role]!;
       expect((await payments.createPayment(null, fd({ studentId: ids.student, amount: "5", modeId: "mode_especes", paidAt: "2026-10-20" })))?.error).toMatch(/Accès refusé/);

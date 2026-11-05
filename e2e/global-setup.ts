@@ -13,7 +13,10 @@ export default async function globalSetup() {
     const tables = await db.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
     await db.$executeRawUnsafe(`TRUNCATE ${tables.map((t) => `"${t.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`);
     execSync("npx tsx prisma/seed.ts", { env: { ...env, SEED_DEMO: "true", DEV_ADMIN_PASSWORD: "E2eAdmin2026xyz" }, stdio: "pipe" });
-    // Compte au mot de passe provisoire (premier login)
+    // Comptes au mot de passe provisoire (premier login)
+    await db.user.create({
+      data: { email: "provisoire@e2e.tn", fullName: "Compte Provisoire", role: "RESPONSABLE", passwordHash: await bcrypt.hash("Provisoire2026e2e", 10), mustChangePassword: true },
+    });
     await db.user.create({
       data: { email: "nouveau@e2e.tn", fullName: "Nouvelle Secrétaire", role: "RESPONSABLE", passwordHash: await bcrypt.hash("Provisoire2026e2e", 10), mustChangePassword: true },
     });

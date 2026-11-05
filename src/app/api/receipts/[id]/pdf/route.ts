@@ -4,12 +4,16 @@ import { db } from "@/server/db";
 import { audit } from "@/server/audit";
 import { receiptPdf } from "@/server/pdf";
 import { can } from "@/lib/permissions";
+import { childrenOf } from "@/server/scope";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await apiUser();
   if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
-  if (!can(user.role, "payments.read")) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const { id } = await params;
+  // Parent : uniquement les reçus valides de ses propres enfants
+  const allowed = can(user.role, "payments.read") || (user.role === "PARENT"
+    && (await db.payment.count({ where: { id, cancelledAt: null, student: childrenOf(user) } })) > 0);
+  if (!allowed) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   const p = await db.payment.findUnique({ where: { id }, select: { receiptNo: true } });
   if (!p) return NextResponse.json({ error: "Reçu introuvable" }, { status: 404 });
   const bytes = await receiptPdf(id);

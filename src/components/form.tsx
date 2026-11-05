@@ -11,6 +11,8 @@ export type ActionState = {
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** Chargement complet de cette page après succès (connexion : voir src/app/login/actions.ts). */
+  redirectTo?: string;
 } | null;
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
@@ -40,6 +42,7 @@ export function Form({
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state?.ok && resetOnSuccess) ref.current?.reset();
+    if (state?.redirectTo) window.location.assign(state.redirectTo);
   }, [state, resetOnSuccess]);
   useEffect(() => {
     if (!state?.error) return;

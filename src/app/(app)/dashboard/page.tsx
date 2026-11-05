@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
 import { CalendarClock, CircleAlert, ClipboardCheck, DoorOpen, GraduationCap, UserPlus, Users, Wallet } from "lucide-react";
@@ -46,6 +47,7 @@ export default async function Dashboard() {
     );
   }
   // Enseignant : espace dédié (ses classes, son emploi du temps, ses appels), sans indicateurs du centre
+  if (user.role === "PARENT") redirect("/parent");
   if (user.role === "ENSEIGNANT") return <TeacherHome user={user} yearLabel={year.label} />;
   const finance = can(user.role, "dashboard.finance");
   const att = can(user.role, "attendance.read");

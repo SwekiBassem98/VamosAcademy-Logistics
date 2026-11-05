@@ -8,6 +8,7 @@ import { audit } from "@/server/audit";
 import { runAction, BusinessError, type ActionState } from "@/server/action";
 import { teacherSchema, availabilitySchema, formToObject } from "@/lib/validation";
 import { overlaps } from "@/lib/schedule";
+import { deleteTeacher } from "@/server/services/deletions";
 import { diff } from "@/lib/history";
 import { parseMoney } from "@/lib/format";
 
@@ -76,4 +77,18 @@ export async function deleteAvailability(id: string): Promise<ActionState> {
     revalidatePath(`/teachers/${a.teacherId}`);
     return "Disponibilité retirée.";
   });
+}
+
+/** Administrateur uniquement : suppression définitive (voir le service pour ce qui est conservé). */
+export async function removeTeacher(id: string, fd: FormData): Promise<ActionState> {
+  const res = await runAction(async () => {
+    const user = await requirePermission("users.manage");
+    const r = await deleteTeacher(id, String(fd.get("reason") ?? ""), user.id);
+    return `Enseignant ${r.name} supprimé.`;
+  });
+  if (res?.ok) {
+    revalidatePath("/teachers");
+    redirect("/teachers");
+  }
+  return res;
 }

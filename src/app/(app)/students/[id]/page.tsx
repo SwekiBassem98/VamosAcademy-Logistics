@@ -5,6 +5,7 @@ import { Archive, FileText, NotebookPen, Pencil, Phone as PhoneIcon, Printer, Wa
 import { Card, CardLink, DescriptionList, PageHeader, Table, Td, Badge, LinkButton, Forbidden, Stat, DemoBadge, Phone as PhoneLink, buttonClass } from "@/components/ui";
 import { Form, FormActions, Input, Select, Submit, Checkbox } from "@/components/form";
 import { Sheet } from "@/components/sheet";
+import { EnrollForm } from "./enroll-form";
 import { ConfirmAction } from "@/components/confirm";
 import { pageUser } from "@/server/auth";
 import { db } from "@/server/db";
@@ -18,7 +19,7 @@ import { PLAN_LABEL } from "@/lib/billing";
 import { FIELD_LABELS, type Change } from "@/lib/history";
 import { weightedAverage, formatScore, KIND_LABEL } from "@/lib/grades";
 import { StudentFields, levelOptions, STATUS_LABEL, STATUS_TONE } from "../student-fields";
-import { updateStudent, addGuardian, updateGuardian, unlinkGuardian, enrollStudent, endEnrollment, archiveStudent, restoreStudent, changeTerms } from "../actions";
+import { updateStudent, addGuardian, updateGuardian, unlinkGuardian, enrollStudent, endEnrollment, archiveStudent, restoreStudent, changeTerms, removeStudent } from "../actions";
 
 const INV_TONE = { PAYEE: "green", PARTIELLE: "amber", IMPAYEE: "gray", EN_RETARD: "red" } as const;
 const ATT_TONE = { PRESENT: "green", ABSENT: "red", RETARD: "amber", EXCUSE: "blue" } as const;
@@ -56,7 +57,7 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
       include: { subject: true, level: true, _count: { select: { enrollments: { where: { status: "ACTIVE" } } } } },
       orderBy: [{ subject: { name: "asc" } }, { name: "asc" }],
     }) : [],
-    write ? db.discountType.findMany({ where: { active: true }, orderBy: { name: "asc" } }) : [],
+    write ? db.discountType.findMany({ orderBy: { name: "asc" } }) : [],
     levelOptions(db),
     can(user.role, "attendance.read")
       ? db.attendanceRecord.findMany({ where: { studentId: id }, include: { session: { include: { group: true } } }, orderBy: { session: { date: "desc" } }, take: 40 })
@@ -115,6 +116,10 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
             ? <ConfirmAction action={restoreStudent.bind(null, s.id)} variant="secondary" label="Réactiver" title="Réactiver ce dossier ?" message="Le dossier repasse au statut actif. Les inscriptions terminées ne sont pas rouvertes." />
             : <ConfirmAction action={archiveStudent.bind(null, s.id)} label={<><Archive /> Archiver</>} title="Archiver ce dossier ?" withReason="Motif"
                 message="Les inscriptions en cours seront terminées aujourd'hui et les mensualités futures non payées retirées. L'historique (paiements, notes, présences) est conservé." confirmLabel="Archiver" />)}
+          {can(user.role, "users.manage") && (
+            <ConfirmAction action={removeStudent.bind(null, s.id)} label="Supprimer" title={`Supprimer définitivement ${s.firstName} ${s.lastName} ?`} withReason="Motif" confirmLabel="Supprimer définitivement"
+              message={<>Cette action est <strong>irréversible</strong>. Le dossier, ses inscriptions, notes et présences seront effacés, ainsi que <strong>{payments.length} paiement(s)</strong> : ils disparaîtront des rapports et de la caisse. Un parent sans autre enfant sera supprimé avec son accès au portail. Pour simplement retirer un élève en gardant son historique, utilisez plutôt « Archiver ».</>} />
+          )}
         </>}
       />
 
@@ -164,9 +169,11 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
                 <div className="border-t border-line p-3">
                   <p className="text-xs text-muted">Les échéances non payées à partir du mois indiqué sont annulées (motif tracé) puis recréées ; celles déjà réglées, même partiellement, sont conservées.</p>
                   {s.enrollments.filter((e) => e.status === "ACTIVE").map((e) => (
-                    <Form key={e.id} action={changeTerms.bind(null, e.id)} className="mt-3 grid items-end gap-3 rounded-md bg-surface p-3 sm:grid-cols-2 xl:grid-cols-5">
-                      <p className="text-sm font-semibold sm:col-span-2 xl:col-span-5">{e.group.name}</p>
-                      <Input label="Mensualité (DT)" name="monthlyFee" defaultValue={(e.monthlyFee / 1000).toFixed(3).replace(".", ",")} inputMode="decimal" />
+                    <Form key={e.id} action={changeTerms.bind(null, e.id)} className="mt-3 grid items-end gap-3 rounded-md bg-surface p-3 sm:grid-cols-2 xl:grid-cols-3">
+                      <p className="text-sm font-semibold sm:col-span-2 xl:col-span-3">{e.group.name} <span className="font-normal text-muted">· tarif de base {formatMoney(e.baseFee || e.group.monthlyFee)}</span></p>
+                      <Select label="Réduction" name="discountTypeId" placeholder="Aucune" defaultValue={e.discountTypeId ?? ""} hint="Choisie : la mensualité est calculée sur le tarif de base."
+                        options={discounts.filter((d) => d.active || d.id === e.discountTypeId).map((d) => ({ value: d.id, label: `${d.name} (−${d.percent} %)` }))} />
+                      <Input label="Mensualité sans réduction (DT)" name="monthlyFee" defaultValue={((e.discountTypeId ? e.baseFee || e.group.monthlyFee : e.monthlyFee) / 1000).toFixed(3).replace(".", ",")} inputMode="decimal" />
                       <Select label="Échéancier" name="plan" defaultValue={e.plan} options={Object.entries(PLAN_LABEL).map(([value, label]) => ({ value, label }))} />
                       <Input label="À partir du mois" name="fromPeriod" type="month" defaultValue={todayISO().slice(0, 7)} />
                       <Input label="Motif *" name="reason" placeholder="ex. accord de la direction" />
@@ -177,20 +184,12 @@ export default async function StudentPage({ params, searchParams }: { params: Pr
               </details>
             )}
             {write && year && (
-              <Form action={enrollStudent.bind(null, s.id)} className="mt-5 grid items-end gap-3 rounded-lg border border-navy-100 bg-navy-50/50 p-3 sm:grid-cols-2 sm:p-4 xl:grid-cols-4" resetOnSuccess>
-                <p className="text-sm font-bold text-navy sm:col-span-2 xl:col-span-4">Nouvelle inscription — année {year.label}</p>
-                <Select label="Groupe (matière · niveau) *" name="groupId" placeholder={groups.length ? "Choisir…" : "Aucun groupe disponible"} wrapperClass="sm:col-span-2"
-                  options={groups.map((g) => ({
-                    value: g.id,
-                    label: `${g.subject.name} · ${g.level.name} · ${g.name} — ${formatMoney(g.monthlyFee)}/mois${g._count.enrollments >= g.capacity ? " (COMPLET)" : ` (${g.capacity - g._count.enrollments} pl.)`}`,
-                  }))} />
-                <Input label="Date d'entrée *" name="startDate" type="date" defaultValue={todayISO()} />
-                <Select label="Échéancier" name="plan" options={Object.entries(PLAN_LABEL).map(([value, label]) => ({ value, label }))} />
-                <Select label="Réduction autorisée" name="discountTypeId" placeholder="Aucune" options={discounts.map((d) => ({ value: d.id, label: `${d.name} (−${d.percent} %)` }))} />
-                <Input label="Justification de la réduction" name="discountNote" wrapperClass="sm:col-span-2 xl:col-span-3" placeholder="ex. frère inscrit : VA-2026-0012" />
-                <Checkbox label="Facturer les frais d'inscription du groupe" name="chargeRegistration" defaultChecked className="sm:col-span-2 xl:col-span-3" />
-                <Submit className="max-sm:w-full">Inscrire</Submit>
-              </Form>
+              <EnrollForm action={enrollStudent.bind(null, s.id)} yearLabel={year.label} billingMonths={year.billingMonths} dueDay={year.dueDay} today={todayISO()}
+                groups={groups.map((g) => ({
+                  id: g.id, monthlyFee: g.monthlyFee, registrationFee: g.registrationFee,
+                  label: `${g.subject.name} · ${g.level.name} · ${g.name} — ${formatMoney(g.monthlyFee)}/mois${g._count.enrollments >= g.capacity ? " (COMPLET)" : ` (${g.capacity - g._count.enrollments} pl.)`}`,
+                }))}
+                discounts={discounts.filter((d) => d.active).map((d) => ({ id: d.id, name: d.name, percent: d.percent }))} />
             )}
           </Card>
 

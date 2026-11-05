@@ -20,6 +20,7 @@ const NAV: (NavItem & { perm?: Permission })[] = [
   { href: "/academics", label: "Groupes, salles & cours", short: "Groupes", icon: "academics", section: "Organisation", perm: "academics.read" },
   { href: "/teachers", label: "Enseignants", icon: "teachers", section: "Organisation", perm: "teachers.read" },
   { href: "/payments", label: "Paiements", short: "Caisse", icon: "payments", section: "Finances", perm: "payments.read" },
+  { href: "/tarifs", label: "Tarifs & réductions", short: "Tarifs", icon: "tag", section: "Finances", perm: "payments.read" },
   { href: "/unpaid", label: "Impayés", icon: "unpaid", section: "Finances", perm: "payments.read" },
   { href: "/expenses", label: "Dépenses", icon: "expenses", section: "Finances", perm: "expenses.read" },
   { href: "/payroll", label: "Rémunérations", icon: "payroll", section: "Finances", perm: "expenses.read" },
@@ -40,13 +41,18 @@ const TEACHER_NAV: NavItem[] = [
   { href: "/documents", label: "Documents à imprimer", short: "Documents", icon: "documents", section: "Centre" },
 ];
 
+// Portail parent : uniquement les informations de ses enfants
+const PARENT_NAV: NavItem[] = [
+  { href: "/parent", label: "Mes enfants", short: "Enfants", icon: "students", section: "Mon espace" },
+];
+
 // Barre d'onglets mobile : les 4 destinations les plus utilisées par chaque rôle (le reste est dans « Menu »)
 const TABS: Record<Role, string[]> = {
   ADMIN: ["/dashboard", "/students", "/attendance", "/payments"],
   RESPONSABLE: ["/dashboard", "/students", "/attendance", "/payments"],
   COMPTABLE: ["/dashboard", "/payments", "/unpaid", "/expenses"],
   ENSEIGNANT: ["/dashboard", "/classes", "/attendance", "/schedule"],
-  LECTURE: ["/dashboard", "/students", "/schedule", "/attendance"],
+  PARENT: ["/parent"],
 };
 
 async function logoutAction() {
@@ -59,15 +65,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireUser();
   // Compte initial ou mot de passe réinitialisé : aucune autre page tant que le mot de passe n'est pas changé
   if (user.mustChangePassword && (await headers()).get("x-pathname") !== "/profile") redirect("/profile");
+  // Un compte parent n'accède à rien d'autre qu'à son portail et à son profil (les données restent aussi filtrées page par page)
+  if (user.role === "PARENT") {
+    const path = (await headers()).get("x-pathname") ?? "";
+    if (path !== "/profile" && path !== "/parent" && !path.startsWith("/parent/")) redirect("/parent");
+  }
   const [year, { items: notices, unread }] = await Promise.all([
     db.schoolYear.findFirst({ where: { active: true }, select: { label: true } }),
     noticesFor(user),
   ]);
-  const items = user.role === "ENSEIGNANT" ? TEACHER_NAV
+  const items = user.role === "ENSEIGNANT" ? TEACHER_NAV : user.role === "PARENT" ? PARENT_NAV
     : NAV.filter((n) => !n.perm || can(user.role, n.perm)).map((n) => ({ href: n.href, label: n.label, short: n.short, icon: n.icon, section: n.section }));
   const tabs = TABS[user.role].filter((h) => items.some((i) => i.href === h));
   return (
-    <AppShell items={items} tabs={tabs} user={{ fullName: user.fullName, role: ROLE_LABELS[user.role], email: user.email }} yearLabel={year?.label ?? null} notices={notices} unread={unread} logout={logoutAction}>
+    <AppShell items={items} tabs={tabs} user={{ fullName: user.fullName, role: ROLE_LABELS[user.role], email: user.email }} yearLabel={year?.label ?? null} notices={notices} unread={unread} logout={logoutAction} minimal={user.role === "PARENT"}>
       {children}
     </AppShell>
   );

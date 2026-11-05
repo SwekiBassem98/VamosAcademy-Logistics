@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ClipboardCheck, FileText, HeartPulse, NotebookPen, Printer } from "lucide-react";
 import { Badge, Card, DemoBadge, EmptyState, Forbidden, LinkButton, PageHeader, Stat } from "@/components/ui";
-import { requireUser } from "@/server/auth";
+import { requireStaff } from "@/server/auth";
 import { db } from "@/server/db";
 import { canAccessGroup } from "@/server/scope";
 import { weightedAverage, formatScore, KIND_LABEL } from "@/lib/grades";
@@ -19,7 +19,7 @@ const pct = (ok: number, n: number) => (n ? Math.round((ok / n) * 100) : null);
  * Aucune donnée financière ni coordonnée complète ; le téléphone du parent reste sur la fiche élève (urgences).
  */
 export default async function ClassPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser();
+  const user = await requireStaff();
   const { id } = await params;
   if (user.role !== "ENSEIGNANT") redirect(`/academics/groups/${id}`);
   if (!(await canAccessGroup(user, id))) return <Forbidden />;

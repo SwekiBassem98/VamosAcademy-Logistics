@@ -85,6 +85,7 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
                     <Submit size="sm" className="max-md:min-h-11">Payer</Submit>
                   </Form>
                 )}
+                {p.status === "PAYE" && <LinkButton size="sm" variant="secondary" href={`/payroll/${p.id}`} aria-label={`Reçu de rémunération de ${p.teacher.lastName} ${p.teacher.firstName}`}>Reçu</LinkButton>}
                 {manage && (
                   <div className="mt-1"><ConfirmAction action={cancelPayroll.bind(null, p.id)} small variant="secondary" label="Annuler" title={`Annuler la paie de ${p.teacher.lastName} (${period}) ?`} withReason="Motif"
                     message={p.status === "PAYE" ? "La dépense liée sera aussi annulée (conservée dans l'historique)." : "La paie restera visible comme annulée ; vous pourrez la recalculer."} /></div>

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePermission } from "@/server/auth";
 import { db } from "@/server/db";
@@ -50,13 +51,16 @@ export async function validate(id: string, _: ActionState, fd: FormData): Promis
 }
 
 export async function pay(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  return runAction(async () => {
+  const res = await runAction(async () => {
     const user = await requirePermission("payroll.manage");
     const v = z.object({ modeId: z.string().min(1, "Moyen obligatoire"), paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide"), reference: z.string().optional() }).parse(formToObject(fd));
     await markPayPaid(id, { ...v, reference: v.reference || null }, user.id);
     revalidatePath("/payroll");
     return "Paiement enregistré et dépense créée.";
   });
+  // Le reçu s'ouvre aussitôt, prêt à imprimer et à faire signer
+  if (res?.ok) redirect(`/payroll/${id}?print=1`);
+  return res;
 }
 
 export async function cancelPayroll(id: string, fd: FormData): Promise<ActionState> {

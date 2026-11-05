@@ -16,7 +16,7 @@ enum Role {
   RESPONSABLE // responsable administratif
   COMPTABLE
   ENSEIGNANT
-  LECTURE // lecture seule
+  PARENT // portail parent : uniquement ses enfants
 }
 
 model User {
@@ -32,6 +32,8 @@ model User {
   lastLoginAt        DateTime?
   teacherId          String?    @unique
   teacher            Teacher?   @relation(fields: [teacherId], references: [id])
+  guardianId         String?    @unique // portail parent : le tuteur dont ce compte voit les enfants
+  guardian           Guardian?  @relation(fields: [guardianId], references: [id])
   sessions           Session[]
   auditLogs          AuditLog[]
   createdAt          DateTime   @default(now())
@@ -288,6 +290,7 @@ model Guardian {
   cin        String?
   isDemo     Boolean           @default(false)
   students   StudentGuardian[]
+  user       User?
   createdAt  DateTime          @default(now())
 
   @@index([phone])
@@ -510,6 +513,7 @@ model TeacherPay {
   teacherId      String
   teacher        Teacher          @relation(fields: [teacherId], references: [id])
   period         String // "AAAA-MM"
+  receiptNo      String?          @unique // reçu de rémunération, attribué au paiement (P-2026-000001)
   payMode        PayMode
   rate           Int // millimes (HORAIRE, MENSUEL, PAR_SEANCE) ou % (POURCENTAGE)
   quantity       Int // minutes (HORAIRE), séances (PAR_SEANCE), assiette en millimes (POURCENTAGE), 1 (MENSUEL)

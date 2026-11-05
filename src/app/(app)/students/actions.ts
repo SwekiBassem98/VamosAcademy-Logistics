@@ -9,6 +9,7 @@ import { runAction, BusinessError, type ActionState } from "@/server/action";
 import { nextStudentCode } from "@/server/services/students";
 import { getActiveYear, syncInvoicesForEnrollment, voidUnpaidInvoices, changeEnrollmentTerms } from "@/server/services/finance";
 import { notify } from "@/server/services/notifications";
+import { deleteStudent } from "@/server/services/deletions";
 import { studentSchema, guardianSchema, enrollmentSchema, termsSchema, formToObject } from "@/lib/validation";
 import { applyDiscount, dueDateFor } from "@/lib/billing";
 import { diff, isProbableDuplicate } from "@/lib/history";
@@ -252,9 +253,16 @@ export async function changeTerms(enrollmentId: string, _: ActionState, fd: Form
   return runAction(async () => {
     const user = await requirePermission("students.write");
     await requirePermission("payments.write"); // impact financier : responsable ou comptable avec droit d'encaissement
-    const v = termsSchema.parse(formToObject(fd));
-    const e = await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId } });
-    const r = await changeEnrollmentTerms(enrollmentId, v, user.id);
+    const { discountTypeId, monthlyFee, ...v } = termsSchema.parse(formToObject(fd));
+    const e = await db.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, include: { group: true } });
+    const discount = discountTypeId ? await db.discountType.findFirst({ where: { id: discountTypeId, OR: [{ active: true }, { id: e.discountTypeId ?? "" }] } }) : null;
+    if (discountTypeId && !discount) throw new BusinessError("Réduction non autorisée.");
+    // Avec une réduction, la mensualité se déduit du tarif de base ; sans réduction, le montant saisi s'applique
+    const baseFee = e.baseFee || e.group.monthlyFee;
+    const r = await changeEnrollmentTerms(enrollmentId, {
+      ...v, monthlyFee: discount ? applyDiscount(baseFee, { percent: discount.percent }) : monthlyFee,
+      discount: { typeId: discount?.id ?? null, percent: discount?.percent ?? 0, baseFee },
+    }, user.id);
     revalidatePath(`/students/${e.studentId}`);
     return `Conditions modifiées : ${r.voided} échéance(s) annulée(s), ${r.created} créée(s). L'historique est conservé.`;
   });
@@ -281,5 +289,20 @@ export async function archiveStudents(fd: FormData): Promise<ActionState> {
     return `${students.length} dossier(s) archivé(s).`;
   });
   revalidatePath("/students");
+  return res;
+}
+
+/** Administrateur uniquement : suppression définitive du dossier et de son historique financier. */
+export async function removeStudent(id: string, fd: FormData): Promise<ActionState> {
+  const res = await runAction(async () => {
+    const user = await requirePermission("users.manage");
+    const r = await deleteStudent(id, String(fd.get("reason") ?? ""), user.id);
+    return `Élève ${r.name} supprimé.`;
+  });
+  if (res?.ok) {
+    revalidatePath("/students");
+    revalidatePath("/payments");
+    redirect("/students");
+  }
   return res;
 }

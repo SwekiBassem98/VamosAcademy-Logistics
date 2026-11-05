@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { login } from "@/server/auth";
 import { clientIp, hit, resetBucket } from "@/server/rate-limit";
 import { runAction, BusinessError, type ActionState } from "@/server/action";
@@ -19,7 +18,8 @@ export async function loginAction(_: ActionState, fd: FormData): Promise<ActionS
     const r = await login(email, password);
     if (!r.ok) throw new BusinessError(r.error);
     await resetBucket(`login:${ip}`);
+    return "Connexion réussie, ouverture de votre espace…";
   });
-  if (res?.ok) redirect("/dashboard");
-  return res;
+  // Pas de redirect() serveur : chargement complet côté client, voir open-space.tsx
+  return res?.ok ? { ...res, redirectTo: "/dashboard" } : res;
 }
