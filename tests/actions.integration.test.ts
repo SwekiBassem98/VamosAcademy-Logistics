@@ -72,8 +72,8 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("permissions appliquées côté serveur", () => {
-  it("la lecture seule ne peut pas créer d'élève", async () => {
-    await loginAs("LECTURE");
+  it("un parent ne peut pas créer d'élève", async () => {
+    await loginAs("PARENT");
     const res = await students.createStudent(null, fd({ firstName: "Test", lastName: "Lecture" }));
     expect(res?.error).toMatch(/Accès refusé/);
     expect(await db.student.count()).toBe(0);

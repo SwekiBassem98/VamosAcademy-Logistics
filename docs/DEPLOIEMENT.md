@@ -142,3 +142,13 @@ migration a été appliquée.
 - [ ] Paramètres du centre, année scolaire, grille tarifaire, moyens de paiement et réductions vérifiés
 - [ ] Interface vérifiée sur un téléphone réel du centre (connexion, appel, encaissement) et sur le poste d'accueil
 - [ ] Sauvegarde nocturne active et copie hors serveur organisée ; restauration testée
+
+## Remise à zéro de la base
+
+`npm run data:reset` efface toutes les données et ne garde qu'un compte administrateur ; le référentiel (année, niveaux, matières, moyens de paiement, modèles) est recréé. **Irréversible** : faites d'abord une sauvegarde. Sans `--yes`, le script n'affiche que la base visée et ce qui serait effacé.
+
+```bash
+DATABASE_URL="<URL directe>" ./scripts/backup.sh
+DATABASE_URL="<URL directe>" npm run data:reset -- --keep-email adresse@domaine.tn --keep-name "Prénom Nom"
+DATABASE_URL="<URL directe>" npm run data:reset -- --keep-email adresse@domaine.tn --keep-name "Prénom Nom" --yes
+```

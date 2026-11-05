@@ -22,7 +22,9 @@ function useOutside(ref: React.RefObject<HTMLElement | null>, close: () => void)
 const panel = "fixed inset-x-2 top-[calc(3.75rem+env(safe-area-inset-top))] z-40 max-h-[calc(100dvh-5rem)] animate-pop overflow-hidden rounded-lg border border-line bg-white shadow-lg sm:absolute sm:inset-x-auto sm:top-full sm:right-0 sm:mt-2";
 const iconBtn = "relative grid size-11 place-items-center rounded-full text-navy transition hover:bg-navy-50 active:bg-navy-100";
 
-export function Topbar({ user, yearLabel, notices, unread, logout }: {
+export function Topbar({ user, yearLabel, notices, unread, logout, minimal }: {
+  /** Portail parent : ni recherche globale ni notifications internes. */
+  minimal?: boolean;
   user: { fullName: string; role: string; email: string };
   yearLabel: string | null;
   notices: Notice[];
@@ -41,26 +43,26 @@ export function Topbar({ user, yearLabel, notices, unread, logout }: {
   return (
     <header className="no-print sticky top-0 z-30 border-b border-line bg-white/95 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="flex h-14 items-center gap-1 px-2 sm:gap-2 sm:px-4 lg:h-16 lg:px-8">
-        <Link href="/dashboard" className="flex shrink-0 items-center rounded px-1.5 lg:hidden" aria-label="VAMOS ACADEMY — tableau de bord">
+        <Link href={minimal ? "/parent" : "/dashboard"} className="flex shrink-0 items-center rounded px-1.5 lg:hidden" aria-label="VAMOS ACADEMY — tableau de bord">
           <Image src="/brand/logo.png" alt="" width={76} height={40} priority />
         </Link>
 
-        <form action="/search" className="relative hidden max-w-md flex-1 lg:block" role="search">
+        {!minimal && <form action="/search" className="relative hidden max-w-md flex-1 lg:block" role="search">
           <Search aria-hidden className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-faint" />
           <input name="q" type="search" placeholder="Rechercher un élève, parent, enseignant, groupe…" aria-label="Recherche globale"
             className="h-10 w-full rounded-md border border-line bg-surface pr-3 pl-9 text-sm outline-none transition focus:border-brand focus:bg-white focus:ring-3 focus:ring-brand/15" />
-        </form>
+        </form>}
 
         <span className="flex-1" />
         <span className="mr-1 hidden rounded-full border border-brand/20 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 md:inline">
           {yearLabel ? `Année ${yearLabel}` : "Aucune année active"}
         </span>
 
-        <button type="button" className={clsx(iconBtn, "lg:hidden")} aria-label="Ouvrir la recherche" aria-haspopup="dialog" onClick={() => search.current?.showModal()}>
+        {!minimal && <button type="button" className={clsx(iconBtn, "lg:hidden")} aria-label="Ouvrir la recherche" aria-haspopup="dialog" onClick={() => search.current?.showModal()}>
           <Search className="size-5" />
-        </button>
+        </button>}
 
-        <div className="sm:relative" ref={nRef}>
+        {!minimal && <div className="sm:relative" ref={nRef}>
           <button type="button" onClick={() => { setOpenN((v) => !v); setOpenP(false); }} className={iconBtn} aria-label={`Notifications (${unread} nouvelle(s))`} aria-expanded={openN}>
             <Bell className="size-5" />
             {unread > 0 && <span className="absolute top-1.5 right-1 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-white ring-2 ring-white">{unread > 99 ? "99+" : unread}</span>}
@@ -83,7 +85,7 @@ export function Topbar({ user, yearLabel, notices, unread, logout }: {
               <Link href="/notifications" onClick={() => setOpenN(false)} className="flex min-h-11 items-center justify-center border-t border-line px-4 text-sm font-semibold text-brand hover:bg-surface">Voir toutes les notifications</Link>
             </div>
           )}
-        </div>
+        </div>}
 
         <div className="sm:relative" ref={pRef}>
           <button type="button" onClick={() => { setOpenP((v) => !v); setOpenN(false); }} className="flex min-h-11 items-center gap-2 rounded-full py-1 pr-1 pl-1 transition hover:bg-navy-50 sm:pr-2" aria-expanded={openP} aria-label="Menu du profil">

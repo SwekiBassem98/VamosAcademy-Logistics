@@ -4,6 +4,7 @@ import { db, type Tx } from "../db";
 import { audit } from "../audit";
 import { BusinessError } from "../action";
 import { notify } from "./notifications";
+import { highestDeletedReceipt } from "./numbering";
 import { allocateFIFO, billableMonths, invoiceStatus, isLate, periodSpan, planInvoices } from "@/lib/billing";
 import { formatMoney, periodOf, parseDay, todayISO } from "@/lib/format";
 
@@ -60,7 +61,7 @@ export async function voidUnpaidInvoices(tx: Tx, enrollmentId: string, fromPerio
  */
 export async function changeEnrollmentTerms(
   enrollmentId: string,
-  input: { monthlyFee: number; plan: PaymentPlan; fromPeriod: string; reason: string },
+  input: { monthlyFee: number; plan: PaymentPlan; fromPeriod: string; reason: string; discount?: { typeId: string | null; percent: number; baseFee: number } },
   userId: string,
 ) {
   if (!input.reason.trim()) throw new BusinessError("Le motif de la modification est obligatoire.");
@@ -68,10 +69,13 @@ export async function changeEnrollmentTerms(
     const e = await tx.enrollment.findUniqueOrThrow({ where: { id: enrollmentId }, include: { group: true } });
     if (e.status !== "ACTIVE") throw new BusinessError("Inscription terminée : modification impossible.");
     const voided = await voidUnpaidInvoices(tx, enrollmentId, input.fromPeriod, `Modification des conditions : ${input.reason}`);
-    await tx.enrollment.update({ where: { id: enrollmentId }, data: { monthlyFee: input.monthlyFee, plan: input.plan } });
+    await tx.enrollment.update({ where: { id: enrollmentId }, data: {
+      monthlyFee: input.monthlyFee, plan: input.plan,
+      ...(input.discount ? { discountTypeId: input.discount.typeId, discountPercent: input.discount.percent, baseFee: input.discount.baseFee } : {}),
+    } });
     const created = await syncInvoicesForEnrollment(enrollmentId, tx);
     await audit(userId, "enrollment.terms", "Student", e.studentId, {
-      enrollmentId, group: e.group.name, from: { monthlyFee: e.monthlyFee, plan: e.plan }, to: { monthlyFee: input.monthlyFee, plan: input.plan },
+      enrollmentId, group: e.group.name, from: { monthlyFee: e.monthlyFee, plan: e.plan, discountPercent: e.discountPercent }, to: { monthlyFee: input.monthlyFee, plan: input.plan, discountPercent: input.discount?.percent ?? e.discountPercent },
       fromPeriod: input.fromPeriod, reason: input.reason, voided, created,
     }, tx);
     return { voided, created };
@@ -117,7 +121,7 @@ export async function studentStatement(studentId: string, schoolYearId: string):
 
 async function nextReceiptNo(tx: Tx, yearStart: string) {
   const last = await tx.payment.findFirst({ where: { receiptNo: { startsWith: `R-${yearStart}-` } }, orderBy: { receiptNo: "desc" }, select: { receiptNo: true } });
-  const n = last ? Number(last.receiptNo.split("-")[2]) + 1 : 1;
+  const n = Math.max(last ? Number(last.receiptNo.split("-")[2]) : 0, await highestDeletedReceipt(tx, "student.delete", `R-${yearStart}-`)) + 1;
   return `R-${yearStart}-${String(n).padStart(6, "0")}`;
 }
 

@@ -1,8 +1,10 @@
 import "server-only";
+import { Prisma } from "@prisma/client";
 import { db } from "../db";
 import { audit } from "../audit";
 import { BusinessError } from "../action";
 import { getActiveYear } from "./finance";
+import { highestDeletedReceipt } from "./numbering";
 import { computeTeacherPay } from "@/lib/payroll";
 import { formatMoney, parseDay, todayISO } from "@/lib/format";
 
@@ -68,7 +70,15 @@ export async function validatePay(id: string, adjustment: number, note: string |
   await audit(userId, "pay.validate", "TeacherPay", id, { computed: p.computedAmount, adjustment, amount, note });
 }
 
-/** Paiement : passe la paie à « payée » et enregistre la dépense correspondante (catégorie Salaires enseignants). */
+/** Numéro de reçu suivant, propre aux rémunérations : P-2026-000001 (année de début de l'année scolaire). */
+async function nextPayReceiptNo(tx: Prisma.TransactionClient, yearLabel: string) {
+  const prefix = `P-${yearLabel.slice(0, 4)}-`;
+  const last = await tx.teacherPay.findFirst({ where: { receiptNo: { startsWith: prefix } }, orderBy: { receiptNo: "desc" }, select: { receiptNo: true } });
+  const n = Math.max(last?.receiptNo ? Number(last.receiptNo.slice(prefix.length)) : 0, await highestDeletedReceipt(tx, "teacher.delete", prefix)) + 1;
+  return prefix + String(n).padStart(6, "0");
+}
+
+/** Paiement : passe la paie à « payée », attribue un numéro de reçu et enregistre la dépense (catégorie Salaires enseignants). */
 export async function markPayPaid(id: string, input: { modeId: string; paidAt: string; reference: string | null }, userId: string) {
   const p = await db.teacherPay.findUniqueOrThrow({ where: { id }, include: { teacher: true } });
   if (p.status !== "VALIDE") throw new BusinessError("La paie doit être validée avant d'être payée.");
@@ -78,16 +88,27 @@ export async function markPayPaid(id: string, input: { modeId: string; paidAt: s
   if (mode.requiresReference && !input.reference) throw new BusinessError(`Référence obligatoire pour ${mode.label.toLowerCase()}.`);
   const year = await getActiveYear();
   const category = await db.expenseCategory.upsert({ where: { name: "Salaires enseignants" }, update: {}, create: { name: "Salaires enseignants" } });
-  await db.$transaction(async (tx) => {
-    await tx.teacherPay.update({ where: { id }, data: { status: "PAYE", paidAt: parseDay(input.paidAt), modeId: mode.id } });
-    await tx.expense.create({
-      data: {
-        schoolYearId: year.id, categoryId: category.id, label: `Rémunération ${p.period} — ${p.teacher.lastName} ${p.teacher.firstName}`,
-        amount: p.amount, modeId: mode.id, reference: input.reference, spentAt: parseDay(input.paidAt), createdById: userId, teacherPayId: p.id,
-      },
-    });
-    await audit(userId, "pay.paid", "TeacherPay", id, { amount: p.amount, mode: mode.code, paidAt: input.paidAt }, tx);
-  });
+  // Deux paiements simultanés peuvent viser le même numéro : l'index unique tranche, on recommence avec le suivant
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await db.$transaction(async (tx) => {
+        const receiptNo = await nextPayReceiptNo(tx, year.label);
+        const { count } = await tx.teacherPay.updateMany({ where: { id, status: "VALIDE" }, data: { status: "PAYE", paidAt: parseDay(input.paidAt), modeId: mode.id, receiptNo } });
+        if (!count) throw new BusinessError("Cette paie vient d'être traitée : rechargez la page.");
+        await tx.expense.create({
+          data: {
+            schoolYearId: year.id, categoryId: category.id, label: `Rémunération ${p.period} — ${p.teacher.lastName} ${p.teacher.firstName}`,
+            amount: p.amount, modeId: mode.id, reference: input.reference, spentAt: parseDay(input.paidAt), createdById: userId, teacherPayId: p.id,
+          },
+        });
+        await audit(userId, "pay.paid", "TeacherPay", id, { amount: p.amount, mode: mode.code, paidAt: input.paidAt, receiptNo }, tx);
+        return receiptNo;
+      });
+    } catch (e) {
+      const conflict = e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+      if (!conflict || attempt >= 4) throw e;
+    }
+  }
 }
 
 /** Annulation tracée ; si la paie était payée, la dépense liée est annulée avec le même motif. */

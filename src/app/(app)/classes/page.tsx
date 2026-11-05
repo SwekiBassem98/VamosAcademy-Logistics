@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { EmptyState, PageHeader } from "@/components/ui";
-import { requireUser } from "@/server/auth";
+import { requireStaff } from "@/server/auth";
 import { teacherClasses } from "@/server/services/teacher";
 import { ClassCard } from "./class-card";
 
@@ -8,7 +8,7 @@ export const metadata = { title: "Mes classes" };
 
 /** Espace enseignant : ses groupes de l'année active. Les autres rôles gèrent les groupes dans « Groupes, salles & cours ». */
 export default async function Classes() {
-  const user = await requireUser();
+  const user = await requireStaff();
   if (user.role !== "ENSEIGNANT") redirect("/academics");
   const classes = await teacherClasses(user);
   const students = classes.reduce((n, c) => n + c.students, 0);

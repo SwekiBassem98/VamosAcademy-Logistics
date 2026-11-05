@@ -59,7 +59,7 @@ describe("sécurité", () => {
   });
 
   it("une session expire au bout de 7 jours même si elle reste active", async () => {
-    const u = await db.user.create({ data: { email: "vieux@sec.tn", fullName: "Vieux", role: "LECTURE", passwordHash: "x" } });
+    const u = await db.user.create({ data: { email: "vieux@sec.tn", fullName: "Vieux", role: "PARENT", passwordHash: "x" } });
     await sessionFor(u.id, new Date(Date.now() - 8 * 86400_000));
     expect(await auth.getCurrentUser()).toBeNull();
     expect(await db.session.count({ where: { userId: u.id } })).toBe(0);

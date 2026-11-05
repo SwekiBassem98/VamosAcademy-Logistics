@@ -158,7 +158,7 @@ test("chaque rôle : onglets mobiles adaptés et pages interdites refusées", as
     [`responsable@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Élèves", "Appels", "Caisse"], [], "/settings"],
     [`comptable@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Caisse", "Impayés", "Dépenses"], ["Appels"], "/attendance"],
     [`enseignant@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Classes", "Appels", "Agenda"], ["Caisse", "Élèves"], "/payments"],
-    [`lecture@demo.vamos-academy.tn`, DEMO_PWD, ["Accueil", "Élèves", "Agenda", "Appels"], ["Caisse"], "/students/new"],
+    [`parent@demo.vamos-academy.tn`, DEMO_PWD, ["Enfants"], ["Caisse", "Élèves", "Appels"], "/nope-404"],
   ];
   for (const [email, pwd, tabs, absent, forbidden] of cases) {
     const page = await newPage(browser, 390);

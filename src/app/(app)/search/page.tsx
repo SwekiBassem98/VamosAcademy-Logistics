@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, PageHeader, Badge, EmptyState, ApplyButton } from "@/components/ui";
-import { requireUser } from "@/server/auth";
+import { requireStaff } from "@/server/auth";
 import { db } from "@/server/db";
 import { groupScope, studentScope } from "@/server/scope";
 import { can } from "@/lib/permissions";
@@ -8,7 +8,7 @@ import { can } from "@/lib/permissions";
 export const metadata = { title: "Recherche" };
 
 export default async function Search({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const user = await requireUser();
+  const user = await requireStaff();
   const q = ((await searchParams).q ?? "").trim();
   const form = (
     <form action="/search" role="search" className="mb-5 flex max-w-xl gap-2">

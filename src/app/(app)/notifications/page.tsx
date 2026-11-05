@@ -3,7 +3,7 @@ import type { NotificationStatus, NotificationType, Prisma } from "@prisma/clien
 import { PageHeader, Table, Td, Badge, EmptyState } from "@/components/ui";
 import { Bulk, SelectAll, SelectRow } from "@/components/bulk";
 import { FilterBar, Pagination, listParams, type Params } from "@/components/table-tools";
-import { requireUser } from "@/server/auth";
+import { requireStaff } from "@/server/auth";
 import { db } from "@/server/db";
 import { syncAlerts, visibleWhere, TYPE_LABEL } from "@/server/services/notifications";
 import { formatDateTime } from "@/lib/format";
@@ -15,7 +15,7 @@ const STATUS_LABEL = { NOUVELLE: "Nouvelle", LUE: "Lue", TRAITEE: "Traitée" } a
 const STATUS_TONE = { NOUVELLE: "red", LUE: "blue", TRAITEE: "green" } as const;
 
 export default async function Notifications({ searchParams }: { searchParams: Promise<Params> }) {
-  const user = await requireUser();
+  const user = await requireStaff();
   await syncAlerts();
   const params = await searchParams;
   const { page } = listParams(params, ["createdAt"] as const, "createdAt", "desc");

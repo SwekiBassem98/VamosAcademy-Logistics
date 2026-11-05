@@ -83,6 +83,7 @@ export async function saveDiscountType(id: string | null, _: ActionState, fd: Fo
       : await db.discountType.create({ data: v });
     await audit(user.id, id ? "discount.update" : "discount.create", "DiscountType", d.id, { ...v, active });
     revalidatePath("/settings", "layout");
+    revalidatePath("/tarifs");
     return "Réduction enregistrée. (Les inscriptions existantes conservent leur tarif.)";
   });
 }
@@ -114,6 +115,7 @@ export async function saveFeeRule(_: ActionState, fd: FormData): Promise<ActionS
     const rule = existing ? await db.feeRule.update({ where: { id: existing.id }, data }) : await db.feeRule.create({ data });
     await audit(user.id, existing ? "fee.update" : "fee.create", "FeeRule", rule.id, data);
     revalidatePath("/settings", "layout");
+    revalidatePath("/tarifs");
     return existing ? "Tarif mis à jour (les groupes existants gardent leur tarif)." : "Tarif ajouté à la grille.";
   });
 }
@@ -126,6 +128,7 @@ export async function deleteFeeRule(id: string): Promise<ActionState> {
     await db.feeRule.delete({ where: { id } });
     await audit(user.id, "fee.delete", "FeeRule", id, { monthlyFee: r.monthlyFee, levelId: r.levelId, subjectId: r.subjectId, cycleId: r.cycleId });
     revalidatePath("/settings", "layout");
+    revalidatePath("/tarifs");
     return "Tarif retiré de la grille.";
   });
 }

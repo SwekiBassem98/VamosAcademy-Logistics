@@ -77,7 +77,7 @@ async function groupData(fd: FormData, groupId?: string) {
   const yearId = groupId ? (await db.group.findUniqueOrThrow({ where: { id: groupId } })).schoolYearId : (await getActiveYear()).id;
   const rule = parsed.monthlyFee == null || parsed.registrationFee == null ? await suggestedFee(yearId, parsed.levelId, parsed.subjectId) : null;
   const monthlyFee = parsed.monthlyFee ?? rule?.monthlyFee;
-  if (monthlyFee == null) throw new BusinessError("Aucun tarif dans la grille pour ce niveau / cette matière : saisissez la mensualité ou complétez la grille tarifaire (Paramètres).");
+  if (monthlyFee == null) throw new BusinessError("Aucun tarif dans la grille pour ce niveau / cette matière : saisissez la mensualité ou complétez la grille (menu Tarifs & réductions).");
   const v = { ...parsed, monthlyFee, registrationFee: parsed.registrationFee ?? rule?.registrationFee ?? 0 };
   if (v.roomId) {
     const room = await db.room.findUniqueOrThrow({ where: { id: v.roomId } });

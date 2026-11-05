@@ -33,7 +33,7 @@ export default async function Expenses({ searchParams }: { searchParams: Promise
     paymentModes(),
     db.expense.aggregate({ where: live, _sum: { amount: true }, _count: { _all: true } }),
     db.expense.groupBy({ by: ["categoryId"], where: live, _sum: { amount: true } }),
-    db.expense.count({ where: { ...live, attachments: { none: {} }, teacherPayId: null } }),
+    db.expense.count({ where: { ...live, attachments: { none: {} }, teacherPayId: null, NOT: { label: { startsWith: "Rémunération " } } } }),
   ]);
   const write = can(user.role, "expenses.write");
   const base = "/expenses";

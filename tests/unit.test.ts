@@ -136,11 +136,8 @@ describe("permissions (5 rôles)", () => {
     expect(can("ENSEIGNANT", "attendance.write")).toBe(true);
     expect(can("ENSEIGNANT", "grades.write")).toBe(true);
   });
-  it("la lecture seule n'a aucune permission d'écriture ni financière", () => {
-    for (const p of PERMISSIONS) {
-      if (/write|cancel|manage|finance|payments|expenses|reports|audit/.test(p)) expect(can("LECTURE", p)).toBe(false);
-    }
-    expect(can("LECTURE", "students.read")).toBe(true);
+  it("un parent n'a aucune permission du personnel : son portail est filtré sur ses enfants", () => {
+    for (const p of PERMISSIONS) expect(can("PARENT", p)).toBe(false);
   });
 });
 

@@ -166,18 +166,20 @@ Règles clés :
 ## 4. Matrice des rôles et permissions
 
 Rôles (v1) : **Administrateur**, **Responsable administratif**, **Comptable**, **Enseignant**, **Lecture seule**.
+
+> Novembre 2026 : le rôle Lecture seule devient **Parent** : portail `/parent`, limité aux enfants du parent associé (`User.guardianId`, filtre `childrenOf` dans `src/server/scope.ts`) ; aucune permission du personnel.
 (Migration `operational_v1` : les anciens rôles Direction et Secrétariat deviennent Responsable administratif.)
 
-| Permission | ADMIN | RESPONSABLE | COMPTABLE | ENSEIGNANT | LECTURE |
+| Permission | ADMIN | RESPONSABLE | COMPTABLE | ENSEIGNANT | PARENT (portail : ses enfants uniquement) |
 |---|:-:|:-:|:-:|:-:|:-:|
 | Tableau de bord (indicateurs financiers) | ✔ | ✔ | ✔ | — | — |
-| `students.read` | ✔ | ✔ | ✔ | ✔ ses groupes | ✔ |
+| `students.read` | ✔ | ✔ | ✔ | ✔ ses groupes | — |
 | `students.write` (dossiers, parents, inscriptions, archivage) | ✔ | ✔ | — | — | — |
-| `academics.read` (groupes, emploi du temps) | ✔ | ✔ | — | ✔ ses groupes | ✔ |
+| `academics.read` (groupes, emploi du temps) | ✔ | ✔ | — | ✔ ses groupes | — |
 | `academics.write` (groupes, créneaux, salles, matières, niveaux) | ✔ | ✔ | — | — | — |
-| `teachers.read` / `teachers.write` | ✔/✔ | ✔/✔ | ✔/— | — | ✔/— |
-| `attendance.read` / `attendance.write` | ✔/✔ | ✔/✔ | — | ✔/✔ ses groupes | ✔/— |
-| `grades.read` / `grades.write` | ✔/✔ | ✔/— | — | ✔/✔ ses groupes | ✔/— |
+| `teachers.read` / `teachers.write` | ✔/✔ | ✔/✔ | ✔/— | — | — |
+| `attendance.read` / `attendance.write` | ✔/✔ | ✔/✔ | — | ✔/✔ ses groupes | — |
+| `grades.read` / `grades.write` | ✔/✔ | ✔/— | — | ✔/✔ ses groupes | — |
 | `payments.read` / `payments.write` | ✔/✔ | ✔/✔ | ✔/✔ | — | — |
 | `payments.cancel` | ✔ | — | ✔ | — | — |
 | `expenses.read` / `expenses.write`, `reports.read` | ✔ | — | ✔ | — | — |

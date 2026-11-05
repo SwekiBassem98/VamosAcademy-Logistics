@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useRef, type ReactNode } from "react";
 import {
-  LayoutDashboard, Users, UserRound, GraduationCap, Layers, CalendarDays, ClipboardCheck, Wallet,
+  Tag, LayoutDashboard, Users, UserRound, GraduationCap, Layers, CalendarDays, ClipboardCheck, Wallet,
   AlertTriangle, Receipt, BarChart3, Settings, ShieldCheck, History, X, NotebookPen, DoorOpen, HandCoins, Bell, MessageSquareText, Printer, Menu, Search,
 } from "lucide-react";
 import clsx from "clsx";
@@ -15,7 +15,7 @@ const ICONS = {
   dashboard: LayoutDashboard, students: Users, guardians: UserRound, teachers: GraduationCap, academics: Layers,
   schedule: CalendarDays, attendance: ClipboardCheck, grades: NotebookPen, rooms: DoorOpen, payments: Wallet,
   unpaid: AlertTriangle, expenses: Receipt, reports: BarChart3, settings: Settings, users: ShieldCheck, audit: History,
-  payroll: HandCoins, bell: Bell, messages: MessageSquareText, documents: Printer,
+  payroll: HandCoins, tag: Tag, bell: Bell, messages: MessageSquareText, documents: Printer,
 };
 export type NavItem = { href: string; label: string; short?: string; icon: keyof typeof ICONS; section: string };
 
@@ -59,9 +59,9 @@ function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => v
   );
 }
 
-function Brand({ onNavigate }: { onNavigate?: () => void }) {
+function Brand({ home, onNavigate }: { home: string; onNavigate?: () => void }) {
   return (
-    <Link href="/dashboard" onClick={onNavigate} className="flex items-center rounded-lg bg-white px-3 py-2 shadow-sm">
+    <Link href={home} onClick={onNavigate} className="flex items-center rounded-lg bg-white px-3 py-2 shadow-sm">
       <Image src="/brand/logo.png" alt="VAMOS ACADEMY — accueil" width={110} height={58} priority />
     </Link>
   );
@@ -109,7 +109,8 @@ function TabBar({ tabs, onMenu }: { tabs: NavItem[]; onMenu: () => void }) {
   );
 }
 
-export function AppShell({ items, tabs, user, yearLabel, notices, unread, logout, children }: {
+export function AppShell({ items, tabs, user, yearLabel, notices, unread, logout, children, minimal }: {
+  minimal?: boolean;
   items: NavItem[];
   tabs: string[];
   user: { fullName: string; role: string; email: string };
@@ -128,7 +129,7 @@ export function AppShell({ items, tabs, user, yearLabel, notices, unread, logout
 
       <aside className="no-print fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-navy lg:flex">
         <nav aria-label="Navigation principale" className="flex min-h-0 flex-1 flex-col">
-          <div className="px-4 pt-4"><Brand /></div>
+          <div className="px-4 pt-4"><Brand home={items[0]?.href ?? "/dashboard"} /></div>
           <NavList items={items} />
         </nav>
         <NavFooter yearLabel={yearLabel} />
@@ -139,7 +140,7 @@ export function AppShell({ items, tabs, user, yearLabel, notices, unread, logout
         className="no-print fixed inset-y-0 left-0 m-0 h-dvh max-h-none w-[min(20rem,88vw)] max-w-none overflow-hidden bg-navy p-0 text-white shadow-lg backdrop:bg-navy-950/60 open:flex open:animate-sheet-left lg:hidden">
         <div className="flex min-h-0 w-full flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-center justify-between gap-2 px-4 pt-3">
-            <Brand onNavigate={close} />
+            <Brand home={items[0]?.href ?? "/dashboard"} onNavigate={close} />
             <button type="button" className="grid size-11 place-items-center rounded-full text-white hover:bg-white/10" onClick={close} aria-label="Fermer le menu"><X /></button>
           </div>
           <form action="/search" role="search" className="relative mx-4 mt-4" onSubmit={close}>
@@ -154,7 +155,7 @@ export function AppShell({ items, tabs, user, yearLabel, notices, unread, logout
       </dialog>
 
       <div className="lg:pl-64 print:pl-0">
-        <Topbar user={user} yearLabel={yearLabel} notices={notices} unread={unread} logout={logout} />
+        <Topbar user={user} yearLabel={yearLabel} notices={notices} unread={unread} logout={logout} minimal={minimal} />
         <main id="contenu" tabIndex={-1} className="mx-auto max-w-7xl px-4 pt-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] outline-none sm:px-6 lg:px-8 lg:pt-7 lg:pb-12 print:max-w-none print:p-0">
           {children}
         </main>

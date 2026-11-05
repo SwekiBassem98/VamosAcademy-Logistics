@@ -85,6 +85,7 @@ export const enrollmentSchema = z.object({
 });
 
 export const termsSchema = z.object({
+  discountTypeId: opt,
   monthlyFee: money("Mensualité"),
   plan: z.enum(["MENSUEL", "TRIMESTRIEL", "ANNUEL"]),
   fromPeriod: req("Mois d'effet").regex(/^\d{4}-\d{2}$/, "Mois invalide"),
@@ -204,8 +205,9 @@ export const schoolYearSchema = z.object({
 export const userSchema = z.object({
   fullName: req("Nom complet"),
   email: req("E-mail").email("E-mail invalide").toLowerCase(),
-  role: z.enum(["ADMIN", "RESPONSABLE", "COMPTABLE", "ENSEIGNANT", "LECTURE"], { error: "Choisissez un rôle" }),
+  role: z.enum(["ADMIN", "RESPONSABLE", "COMPTABLE", "ENSEIGNANT", "PARENT"], { error: "Choisissez un rôle" }),
   teacherId: opt,
+  guardianId: opt,
   password: opt.refine((v) => !v || strongPassword(v), "Mot de passe : 10 caractères min., avec lettres et chiffres"),
 });
 

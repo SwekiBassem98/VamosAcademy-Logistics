@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Forbidden, Badge } from "@/components/ui";
+import { Download } from "lucide-react";
+import { Forbidden, Badge, buttonClass } from "@/components/ui";
 import { PrintButton } from "@/components/print-button";
 import { DocHeader, DocFooter, DocPage } from "@/components/document";
 import { pageUser } from "@/server/auth";
@@ -12,20 +13,25 @@ export const metadata = { title: "Fiche de rémunération" };
 
 type Details = { sessions?: { date: string; group: string; minutes: number; scheduled: boolean }[]; minutes?: number; collected?: number };
 
-export default async function PaySlip({ params }: { params: Promise<{ id: string }> }) {
+export default async function PaySlip({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ print?: string }> }) {
   if (!(await pageUser("expenses.read"))) return <Forbidden />;
   const { id } = await params;
   const p = await db.teacherPay.findUnique({ where: { id }, include: { teacher: true, mode: true, expense: true } });
   if (!p) notFound();
   const d = (p.details ?? {}) as Details;
+  const { print } = await searchParams;
+  const isReceipt = !!p.receiptNo;
   return (
     <>
       <div className="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
         <Link href={`/payroll?period=${p.period}`} className="inline-flex min-h-10 items-center text-sm font-medium text-muted hover:text-brand">← Rémunérations</Link>
-        <PrintButton />
+        <div className="flex flex-wrap items-center gap-2">
+          {isReceipt && <a href={`/api/payroll/${p.id}/pdf`} className={buttonClass({ variant: "secondary" })}><Download /> PDF</a>}
+          <PrintButton auto={print === "1" && p.status === "PAYE"} label={isReceipt ? "Imprimer le reçu" : "Imprimer"} />
+        </div>
       </div>
       <DocPage>
-        <DocHeader title="Fiche de rémunération" reference={p.period} lines={[`${p.teacher.lastName} ${p.teacher.firstName}`, PAY_STATUS_LABEL[p.status]]} />
+        <DocHeader title={isReceipt ? "Reçu de rémunération" : "Fiche de rémunération"} reference={p.receiptNo ?? p.period} lines={[`${p.teacher.lastName} ${p.teacher.firstName}`, ...(isReceipt ? [`Période ${p.period}`] : []), PAY_STATUS_LABEL[p.status]]} />
         <dl className="mt-4 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 print:grid-cols-2">
           <div className="flex gap-2"><dt className="w-36 text-muted">Modalité</dt><dd>{PAY_MODE_LABEL[p.payMode]}</dd></div>
           <div className="flex gap-2"><dt className="w-36 text-muted">Taux</dt><dd>{p.payMode === "POURCENTAGE" ? `${p.rate} %` : formatMoney(p.rate)}{p.payMode === "HORAIRE" ? " / heure" : p.payMode === "PAR_SEANCE" ? " / séance" : ""}</dd></div>
