@@ -1,5 +1,7 @@
 "use server";
 
+import { deleteGroup } from "@/server/services/deletions";
+import { can } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -145,4 +147,19 @@ export async function deleteSlot(slotId: string): Promise<ActionState> {
     revalidatePath("/schedule");
     return "Créneau supprimé.";
   });
+}
+
+export async function removeGroup(id: string, fd: FormData): Promise<ActionState> {
+  const res = await runAction(async () => {
+    const user = await requirePermission("academics.write");
+    const name = await deleteGroup(id, String(fd.get("reason") ?? ""), user.id, can(user.role, "users.manage"));
+    return `Groupe ${name} supprimé.`;
+  });
+  if (res?.ok) {
+    revalidatePath("/academics");
+    revalidatePath("/schedule");
+    revalidatePath("/tarifs");
+    redirect("/academics");
+  }
+  return res;
 }

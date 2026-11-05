@@ -255,6 +255,82 @@ describe("suppressions par l'administrateur", () => {
   });
 });
 
+describe("suppression d'un groupe", () => {
+  const groups = import("@/app/(app)/academics/actions");
+  async function newGroup(name: string) {
+    return db.group.create({ data: { name, schoolYearId: ids.year, levelId: ids.level, subjectId: ids.subject, capacity: 10, monthlyFee: 40000 } });
+  }
+  async function enroll(groupId: string, code: string) {
+    const s = await db.student.create({ data: { code, firstName: "E", lastName: code, status: "ACTIF" } });
+    const e = await db.enrollment.create({ data: { studentId: s.id, groupId, startDate: new Date("2026-09-15T12:00:00Z"), baseFee: 40000, monthlyFee: 40000 } });
+    const inv = await db.invoice.create({ data: { enrollmentId: e.id, period: "2026-09", amount: 40000, dueDate: new Date("2026-09-20T12:00:00Z") } });
+    return { studentId: s.id, enrollmentId: e.id, invoiceId: inv.id };
+  }
+
+  it("un groupe vide : responsable autorisé, pas de motif, créneaux effacés ; comptable et parent refusés", async () => {
+    const { removeGroup } = await groups;
+    const room = await db.room.create({ data: { name: "Salle G", capacity: 20 } });
+    const g = await newGroup("Vide");
+    const slot = await db.scheduleSlot.create({ data: { groupId: g.id, roomId: room.id, weekday: 2, startMin: 600, endMin: 660 } });
+    await loginAs("COMPTABLE");
+    expect((await removeGroup(g.id, fd({})))?.error).toMatch(/Accès refusé/);
+    await loginAs("PARENT");
+    expect((await removeGroup(g.id, fd({})))?.error).toMatch(/Accès refusé/);
+    await loginAs("RESPONSABLE");
+    expect((await removeGroup(g.id, fd({})))?.ok).toBe(true);
+    expect(await db.group.count({ where: { id: g.id } })).toBe(0);
+    expect(await db.scheduleSlot.count({ where: { id: slot.id } })).toBe(0);
+    expect(await db.room.count({ where: { id: room.id } })).toBe(1);
+    expect(await db.auditLog.count({ where: { action: "group.delete", entityId: g.id } })).toBe(1);
+    expect((await removeGroup(g.id, fd({})))?.error).toMatch(/déjà été supprimé/);
+  });
+
+  it("un groupe avec données : administrateur et motif obligatoires, les élèves et leurs autres groupes restent", async () => {
+    const { removeGroup } = await groups;
+    const g = await newGroup("Avec données");
+    const other = await newGroup("Autre groupe");
+    const a = await enroll(g.id, "G-1");
+    const keep = await db.enrollment.create({ data: { studentId: a.studentId, groupId: other.id, startDate: new Date("2026-09-15T12:00:00Z"), baseFee: 40000, monthlyFee: 40000 } });
+    const session = await db.attendanceSession.create({ data: { groupId: g.id, date: new Date("2026-10-02T00:00:00Z"), records: { create: { studentId: a.studentId, status: "ABSENT" } } } });
+    const assess = await db.assessment.create({ data: { groupId: g.id, title: "Devoir", kind: "DEVOIR", term: 1, date: new Date("2026-10-03T12:00:00Z"), grades: { create: { studentId: a.studentId, score: 12 } } } });
+    await db.notification.create({ data: { type: "NOUVEL_INSCRIT", title: "x", permission: "students.read", dedupeKey: `enroll:${a.studentId}:${g.id}`, href: `/students/${a.studentId}` } });
+
+    await loginAs("RESPONSABLE");
+    expect((await removeGroup(g.id, fd({ reason: "erreur de création" })))?.error).toMatch(/seul un administrateur/);
+    await loginAs("ADMIN");
+    expect((await removeGroup(g.id, fd({ reason: "" })))?.error).toMatch(/motif/i);
+    expect(await db.group.count({ where: { id: g.id } })).toBe(1);
+
+    expect((await removeGroup(g.id, fd({ reason: "erreur de création" })))?.ok).toBe(true);
+    expect(await db.group.count({ where: { id: g.id } })).toBe(0);
+    expect(await db.enrollment.count({ where: { id: a.enrollmentId } })).toBe(0);
+    expect(await db.invoice.count({ where: { id: a.invoiceId } })).toBe(0);
+    expect(await db.attendanceRecord.count({ where: { sessionId: session.id } })).toBe(0);
+    expect(await db.grade.count({ where: { assessmentId: assess.id } })).toBe(0);
+    expect(await db.notification.count({ where: { dedupeKey: `enroll:${a.studentId}:${g.id}` } })).toBe(0);
+    expect(await db.student.count({ where: { id: a.studentId } })).toBe(1);
+    expect(await db.enrollment.count({ where: { id: keep.id } })).toBe(1);
+    const log = await db.auditLog.findFirstOrThrow({ where: { action: "group.delete", entityId: g.id } });
+    expect(log.details).toMatchObject({ name: "Avec données", reason: "erreur de création", enrollments: 1, sessions: 1, assessments: 1, studentCodes: ["G-1"] });
+    // Le nom est de nouveau disponible pour cette année
+    expect((await newGroup("Avec données")).name).toBe("Avec données");
+  });
+
+  it("refuse la suppression dès qu'un paiement, même annulé, porte sur le groupe, sans rien effacer", async () => {
+    const { removeGroup } = await groups;
+    const g = await newGroup("Payé");
+    const a = await enroll(g.id, "G-2");
+    const p = await recordPayment({ studentId: a.studentId, amount: 10000, modeId: "mode_especes", reference: null, paidAt: "2026-10-01", note: null, invoiceIds: [] }, ids.admin);
+    await loginAs("ADMIN");
+    expect((await removeGroup(g.id, fd({ reason: "essai de suppression" })))?.error).toMatch(/paiements sont enregistrés/);
+    await db.payment.update({ where: { id: p.id }, data: { cancelledAt: new Date(), cancelReason: "test" } });
+    expect((await removeGroup(g.id, fd({ reason: "essai de suppression" })))?.error).toMatch(/paiements sont enregistrés/);
+    expect(await db.group.count({ where: { id: g.id } })).toBe(1);
+    expect(await db.enrollment.count({ where: { id: a.enrollmentId } })).toBe(1);
+    expect(await db.payment.count({ where: { id: p.id } })).toBe(1);
+  });
+});
+
 describe("remise à zéro de la base (npm run data:reset)", () => {
   const url = process.env.TEST_DATABASE_URL!.replace(/\/[^/?]+(\?|$)/, "/vamos_reset_test$1");
   const env = { ...process.env, DATABASE_URL: url, SEED_DEMO: "true", DEV_ADMIN_PASSWORD: "NeDoitPasServir2026" };

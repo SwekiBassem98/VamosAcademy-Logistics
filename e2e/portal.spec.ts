@@ -128,3 +128,36 @@ test("suppressions : fenêtre de confirmation, annulation possible, puis effacem
   await expect(del).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Supprimer le compte de Administrateur/ })).toHaveCount(0); // son propre compte
 });
+
+test("suppression d'un groupe : confirmation, annulation possible, refus si des paiements existent", async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto("/academics");
+  await page.getByRole("button", { name: "Nouveau groupe" }).click();
+  const form = page.locator("dialog[open]");
+  await form.locator('input[name="name"]').fill("Groupe à supprimer");
+  await form.locator('select[name="levelId"]').selectOption({ index: 1 });
+  await form.locator('select[name="subjectId"]').selectOption({ index: 1 });
+  await form.locator('input[name="capacity"]').fill("5");
+  await form.locator('input[name="monthlyFee"]').fill("30");
+  await form.getByRole("button", { name: "Créer le groupe" }).click();
+  await page.waitForURL(/\/academics\/groups\/c/);
+
+  await page.getByRole("button", { name: "Supprimer le groupe", exact: true }).click();
+  const dialog = page.locator("dialog[open]");
+  await expect(dialog).toContainText("irréversible");
+  await dialog.getByRole("button", { name: "Annuler" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Groupe à supprimer" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Supprimer le groupe", exact: true }).click();
+  await page.locator("dialog[open]").getByRole("button", { name: "Supprimer définitivement" }).click();
+  await page.waitForURL(/\/academics$/);
+  await expect(page.getByRole("heading", { name: /Groupes/ }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Groupe à supprimer" })).toHaveCount(0);
+
+  // Maths 9e a des paiements de démonstration : pas de bouton, explication affichée
+  await page.getByRole("link", { name: "Maths 9e — G1" }).first().click();
+  await page.waitForURL(/\/academics\/groups\/c/);
+  await expect(page.getByText("Suppression impossible : des paiements")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Supprimer le groupe", exact: true })).toHaveCount(0);
+});
+
