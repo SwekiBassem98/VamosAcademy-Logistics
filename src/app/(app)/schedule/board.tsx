@@ -32,7 +32,7 @@ export function ScheduleBoard({ slots, days, today }: { slots: BoardSlot[]; days
           );
         })}
       </div>
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6 print:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-7 print:grid-cols-7 print:gap-1.5">
         {days.map((d) => {
           const daySlots = slots.filter((s) => s.weekday === d);
           return (

@@ -161,3 +161,31 @@ test("suppression d'un groupe : confirmation, annulation possible, refus si des 
   await expect(page.getByRole("button", { name: "Supprimer le groupe", exact: true })).toHaveCount(0);
 });
 
+
+test("emploi du temps : la semaine complète jusqu'au dimanche, créneau du dimanche affiché", async ({ page }) => {
+  await login(page, ADMIN);
+  await page.goto("/schedule");
+  for (const d of ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]) await expect(page.getByRole("region", { name: d })).toBeVisible();
+
+  // Créneau du dimanche ajouté depuis la fiche du groupe
+  await page.goto("/academics");
+  await page.getByRole("link", { name: "Français 6e — G1" }).first().click();
+  await page.waitForURL(/\/academics\/groups\/c/);
+  const slotForm = page.locator("form").filter({ hasText: "Ajouter un créneau" });
+  await slotForm.locator('select[name="weekday"]').selectOption({ label: "Dimanche" });
+  await slotForm.locator('input[name="start"]').fill("09:00");
+  await slotForm.locator('input[name="end"]').fill("10:30");
+  await slotForm.getByRole("button", { name: "Ajouter", exact: true }).click();
+  await expect(slotForm.locator('p[role="status"]')).toBeVisible();
+  await expect(page.getByText(/Dimanche\s*09:00/).first()).toBeVisible();
+
+  await page.goto("/schedule");
+  const sunday = page.getByRole("region", { name: "Dimanche" });
+  await expect(sunday.getByText("Français 6e — G1")).toBeVisible();
+  await expect(sunday.getByText("09:00")).toBeVisible();
+
+  // Sur téléphone : un onglet « Dim. »
+  await page.setViewportSize({ width: 390, height: 860 });
+  await page.getByRole("tab", { name: /Dim\./ }).click();
+  await expect(sunday.getByText("Français 6e — G1")).toBeVisible();
+});

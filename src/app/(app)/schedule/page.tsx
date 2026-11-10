@@ -29,7 +29,8 @@ export default async function Schedule({ searchParams }: { searchParams: Promise
     // Tous les créneaux de l'année active, pour signaler les chevauchements même hors du filtre
     db.scheduleSlot.findMany({ where: { group: { active: true, schoolYear: { active: true } } }, select: { id: true, weekday: true, startMin: true, endMin: true, roomId: true, groupId: true, group: { select: { name: true, teacherId: true } } } }),
   ]);
-  const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => d <= 6 || slots.some((s) => s.weekday === 7));
+  // Semaine complète, du lundi au dimanche : un jour sans cours reste visible (« Aucun cours »)
+  const days = [1, 2, 3, 4, 5, 6, 7];
   const attendance = can(user.role, "attendance.read");
 
   const board: BoardSlot[] = slots.map((s) => {
